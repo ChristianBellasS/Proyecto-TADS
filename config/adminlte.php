@@ -334,12 +334,12 @@ return [
         ['header' => 'Gestión de Vehiculos'],
         [
             'text' => 'Marcas',
-            'url' => 'admin.brands.index',
+            'url' => 'admin/brands',
             'icon' => 'fas fa-copyright',
         ],
         [
             'text' => 'Modelos',
-            'url' => 'admin.models.index',
+            'url' => 'admin/brandmodel',
             'icon' => 'fas fa-trailer',
         ],
         [
