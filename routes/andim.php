@@ -10,7 +10,7 @@ use App\Http\Controllers\admin\VehicleController;
 
 Route::get('/',[AdminController::class,'index'])->name('admin.index');
 Route::resource('brands', BrandController::class)->names('admin.brands');
-Route::resource('brandmodel', BrandmodelController::class)->names('admin.models');
+Route::resource('brandmodels', BrandmodelController::class)->names('admin.brandmodels');
 Route::resource('vehicletypes', VehicleTypeController::class)->names('admin.vehicletypes');
 Route::resource('colors', ColorController::class)->names('admin.colors');
 Route::resource('vehicles', VehicleController::class)->names('admin.vehicles');
