@@ -339,7 +339,7 @@ return [
         ],
         [
             'text' => 'Modelos',
-            'url' => 'admin/brandmodel',
+            'url' => 'admin/brandmodels',
             'icon' => 'fas fa-trailer',
         ],
         [
@@ -357,13 +357,25 @@ return [
             'url' => 'admin/vehicles',
             'icon' => 'fas fa-car',
         ],
-        ['header' => 'Gestión de Zonas'],
+        [
+            'text' => 'Vehículos',
+            'url' => 'admin/vehicles',
+            'icon' => 'fas fa-car',
+        ],
+        [
+            'text' => 'Imágenes de vehículo',
+            'url' => 'admin/vehicleimages',
+            'icon' => 'fas fa-car',
+        ],
+        [
+            'header' => 'Gestión de Zonas',
+        ],
         [
             'text'=> 'Zonas',
             'url'=> 'admin/zones',
             'icon'=> 'fa-regular fa-map'
 
-        ]
+        ],
     ],
 
     /*
