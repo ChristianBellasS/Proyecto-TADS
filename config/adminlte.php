@@ -353,7 +353,7 @@ return [
             'icon' => 'fas fa-palette',
         ],
         [
-            'text' => 'Vehculos',
+            'text' => 'Vehículos',
             'url' => 'admin/vehicles',
             'icon' => 'fas fa-car',
         ],
