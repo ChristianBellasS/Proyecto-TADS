@@ -38,6 +38,34 @@
             });
         @endif
 
+        $('#modal').on('shown.bs.modal', function () {
+            setTimeout(function() {
+                // Verificar si hay coordenadas y dibujar el polígono
+                @if($zone->coordinates->count() > 0)
+                    const coords = [];
+                    $('.coordinate-point').each(function() {
+                        const lat = parseFloat($(this).find('.coord-lat').val());
+                        const lng = parseFloat($(this).find('.coord-lng').val());
+                        if (!isNaN(lat) && !isNaN(lng)) {
+                            coords.push([lat, lng]);
+                        }
+                    });
+                    
+                    if (coords.length >= 3) {
+                        // Usar la función redrawPolygon del form.blade.php
+                        if (typeof redrawPolygon === 'function') {
+                            redrawPolygon(coords);
+                            
+                            // Ajustar vista del mapa al polígono
+                            if (map && currentPolygon) {
+                                map.fitBounds(currentPolygon.getBounds());
+                            }
+                        }
+                    }
+                @endif
+            }, 1000);
+        });
+
         // Manejar cambios en departamento y provincia (igual que en create)
         $('#department_id').change(function() {
             var departmentId = $(this).val();

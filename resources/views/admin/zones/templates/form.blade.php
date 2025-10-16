@@ -267,9 +267,12 @@
     }
 
     function redrawPolygon(coords) {
-        if (!map) return;
+        if (!map) {
+            console.log('Mapa no está inicializado');
+            return;
+        }
 
-        // 🔹 Elimina el polígono anterior solo si existe dentro del grupo
+        // 🔹 Elimina el polígono anterior
         if (currentPolygon && drawnItems.hasLayer(currentPolygon)) {
             drawnItems.removeLayer(currentPolygon);
         }
@@ -278,15 +281,28 @@
             currentPolygon = L.polygon(coords, {
                 color: 'blue',
                 fillColor: '#3388ff',
-                fillOpacity: 0.2
+                fillOpacity: 0.2,
+                weight: 2
             });
+
             drawnItems.addLayer(currentPolygon);
             map.fitBounds(currentPolygon.getBounds());
 
-            // 🔹 ACTIVAR MODO EDICIÓN
-            if (currentPolygon) {
-                currentPolygon.editing.enable();
+            // 🔹 ACTIVAR MODO EDICIÓN (con validación)
+            if (currentPolygon && currentPolygon.editing) {
+                try {
+                    currentPolygon.editing.enable();
+                } catch (error) {
+                    console.log('No se pudo activar edición:', error);
+                    // No es crítico, el polígono se dibujó correctamente
+                }
+            } else {
+                console.log('Polygon editing no disponible');
             }
+
+            console.log('Polígono dibujado con', coords.length, 'coordenadas');
+        } else {
+            console.log('Coordenadas insuficientes:', coords.length);
         }
     }
 </script>

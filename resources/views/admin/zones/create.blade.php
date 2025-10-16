@@ -94,7 +94,8 @@
                         if (window.parent.refreshTable) {
                             window.parent.refreshTable();
                         } else {
-                            window.parent.location.reload();
+                            //window.parent.location.reload();
+                            $(document).trigger('zonaCreada');
                         }
                     });
                 },

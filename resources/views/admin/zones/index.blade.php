@@ -197,6 +197,14 @@
                 });
             }
 
+            $(document).on('zonaCreada', function() {
+                refreshTable();
+            });
+
+            $('#modal').on('hidden.bs.modal', function() {
+                refreshTable();
+            });
+
             // Inicializar mapa (función placeholder)
             function initializeMap() {
                 console.log('Mapa inicializado');
