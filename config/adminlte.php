@@ -353,10 +353,17 @@ return [
             'icon' => 'fas fa-palette',
         ],
         [
-            'text' => 'Vehculos',
+            'text' => 'Vehiculos',
             'url' => 'admin/vehicles',
             'icon' => 'fas fa-car',
         ],
+        ['header' => 'Gestión de Zonas'],
+        [
+            'text'=> 'Zonas',
+            'url'=> 'admin/zones',
+            'icon'=> 'fa-regular fa-map'
+
+        ]
     ],
 
     /*
