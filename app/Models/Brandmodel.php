@@ -9,6 +9,17 @@ class Brandmodel extends Model
 {
     use HasFactory;
 
-
+    protected $table = 'brandmodels';
+    
     protected $guarded = [];
+
+    public function brand()
+    {
+        return $this->belongsTo(Brand::class);
+    }
+
+    public function vehicles()
+    {
+        return $this->hasMany(Vehicle::class, 'model_id');
+    }
 }

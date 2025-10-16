@@ -352,6 +352,11 @@ return [
             'url' => 'admin/colors',
             'icon' => 'fas fa-palette',
         ],
+        [
+            'text' => 'Vehculos',
+            'url' => 'admin/vehicles',
+            'icon' => 'fas fa-car',
+        ],
     ],
 
     /*
