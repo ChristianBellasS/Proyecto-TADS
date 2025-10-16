@@ -85,23 +85,29 @@
 {!! Form::close() !!}
 
 <script>
-// Array para almacenar nuevas imágenes
-let newUploadedFiles = [];
-// Array para almacenar imágenes a eliminar
-let imagesToDelete = [];
-
-// Inicializar cuando se carga el modal
-function initializeEditModal() {
-    // Resetear el estado cada vez que se abre el modal
-    newUploadedFiles = [];
-    imagesToDelete = [];
+// Función para inicializar el estado del modal - CORREGIDA
+function initializeEditModalState() {
+    console.log('🔄 Inicializando estado del modal EDIT');
     
-    // Actualizar campo oculto
+    // Resetear arrays
+    window.newUploadedFiles = [];
+    window.imagesToDelete = [];
+    
+    // Limpiar vista previa
+    $('#newImagesContainer').empty();
+    
+    // Resetear campos
     $('#imagesToDelete').val('');
+    $('.custom-file-label').text('Seleccione imágenes adicionales');
     
-    // Mostrar imágenes nuevas si existen
-    updateNewImagesPreview();
-    updateFileLabel();
+    // Resetear selección de eliminación
+    $('.image-item').removeClass('to-be-deleted');
+    $('.image-item img').removeClass('opacity-50');
+    
+    // Resetear input file
+    $('#new_images').val('');
+    
+    console.log('✅ Estado del modal inicializado correctamente');
 }
 
 // Establecer imagen existente como perfil
@@ -145,15 +151,15 @@ function markForDeletion(imageId) {
         cancelButtonText: 'Cancelar'
     }).then((result) => {
         if (result.isConfirmed) {
-            if (!imagesToDelete.includes(imageId)) {
-                imagesToDelete.push(imageId);
+            if (!window.imagesToDelete.includes(imageId)) {
+                window.imagesToDelete.push(imageId);
                 
                 // Marcar visualmente la imagen para eliminación
                 $(`.image-item[data-image-id="${imageId}"]`).addClass('to-be-deleted');
                 $(`.image-item[data-image-id="${imageId}"] img`).addClass('opacity-50');
                 
                 // Actualizar campo oculto
-                $('#imagesToDelete').val(imagesToDelete.join(','));
+                $('#imagesToDelete').val(window.imagesToDelete.join(','));
                 
                 Swal.fire('Marcada', 'La imagen se eliminará al guardar los cambios', 'info');
             }
@@ -161,9 +167,10 @@ function markForDeletion(imageId) {
     });
 }
 
-// Vista previa de nuevas imágenes - CORREGIDO
-$('#new_images').on('change', function() {
+// Vista previa de nuevas imágenes - CORREGIDA
+$(document).on('change', '#new_images', function() {
     const newFiles = Array.from(this.files);
+    console.log('📁 Archivos seleccionados:', newFiles.length);
     
     if (newFiles.length > 0) {
         // Ocultar mensaje de no imágenes
@@ -171,78 +178,84 @@ $('#new_images').on('change', function() {
     }
     
     let filesProcessed = 0;
+    const validFiles = [];
     
     newFiles.forEach((file) => {
         // Verificar si el archivo ya existe para evitar duplicados
-        const isDuplicate = newUploadedFiles.some(existingFile => 
+        const isDuplicate = window.newUploadedFiles?.some(existingFile => 
             existingFile.name === file.name && existingFile.size === file.size
         );
         
-        if (!isDuplicate && file.size <= 2 * 1024 * 1024) { // 2MB limit
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                // Agregar al array de nuevas imágenes
-                newUploadedFiles.push({
-                    file: file,
-                    preview: e.target.result,
-                    name: file.name,
-                    size: file.size,
-                    isProfile: false
-                });
-                
-                filesProcessed++;
-                
-                // Si es el último archivo, actualizar la vista
-                if (filesProcessed === newFiles.length) {
-                    updateNewImagesPreview();
-                    updateNewFileInput();
-                    updateFileLabel();
-                }
-            };
-            
-            reader.onload = function(e) {
-                newUploadedFiles.push({
-                    file: file,
-                    preview: e.target.result,
-                    name: file.name,
-                    size: file.size,
-                    isProfile: false
-                });
-                
-                filesProcessed++;
-                
-                if (filesProcessed === newFiles.length) {
-                    updateNewImagesPreview();
-                    updateNewFileInput();
-                    updateFileLabel();
-                }
-            };
-            
-            reader.readAsDataURL(file);
+        if (!isDuplicate && file.size <= 2 * 1024 * 1024) {
+            validFiles.push(file);
         } else if (file.size > 2 * 1024 * 1024) {
             Swal.fire('Error', `La imagen "${file.name}" excede el tamaño máximo de 2MB`, 'error');
         }
+    });
+    
+    if (validFiles.length === 0) return;
+    
+    validFiles.forEach((file) => {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            console.log('✅ Imagen cargada:', file.name);
+            
+            // Asegurarse de que el array existe
+            if (!window.newUploadedFiles) {
+                window.newUploadedFiles = [];
+            }
+            
+            // Agregar al array de nuevas imágenes
+            window.newUploadedFiles.push({
+                file: file,
+                preview: e.target.result,
+                name: file.name,
+                size: file.size,
+                isProfile: false
+            });
+            
+            filesProcessed++;
+            
+            // Si es el último archivo, actualizar la vista
+            if (filesProcessed === validFiles.length) {
+                console.log('🎨 Actualizando vista previa con', window.newUploadedFiles.length, 'imágenes');
+                updateNewImagesPreview();
+                updateNewFileInput();
+                updateFileLabel();
+            }
+        };
+        
+        reader.onerror = function(e) {
+            console.error('❌ Error al leer archivo:', file.name, e);
+            filesProcessed++;
+        };
+        
+        reader.readAsDataURL(file);
     });
     
     // Limpiar el input file para permitir nuevas selecciones
     $(this).val('');
 });
 
-// Actualizar vista previa de nuevas imágenes - CORREGIDO
+// Actualizar vista previa de nuevas imágenes - CORREGIDA
 function updateNewImagesPreview() {
     const container = $('#newImagesContainer');
     container.empty();
     
-    if (newUploadedFiles.length === 0) {
+    if (!window.newUploadedFiles || window.newUploadedFiles.length === 0) {
+        console.log('ℹ️ No hay imágenes nuevas para mostrar');
         return;
     }
     
-    newUploadedFiles.forEach((fileData, index) => {
+    console.log('🖼️ Mostrando', window.newUploadedFiles.length, 'imágenes nuevas');
+    
+    window.newUploadedFiles.forEach((fileData, index) => {
         const previewItem = $(`
             <div class="image-item position-relative text-center" data-index="${index}" data-type="new" style="width: 100px;">
                 <img src="${fileData.preview}" class="img-thumbnail w-100 h-100 ${fileData.isProfile ? 'border-success border-3' : ''}" 
-                     style="width: 100px; height: 100px; object-fit: cover; cursor: pointer;">
+                     style="width: 100px; height: 100px; object-fit: cover; cursor: pointer;"
+                     onerror="console.error('❌ Error cargando imagen:', this.src)">
                 
                 <!-- Corona para imagen de perfil -->
                 <div class="crown-button position-absolute ${fileData.isProfile ? 'text-warning' : 'text-secondary'}" 
@@ -277,7 +290,7 @@ function setNewAsProfile(index) {
     $('#profileImageId').val('');
     
     // Actualizar estado en el array
-    newUploadedFiles.forEach((file, i) => {
+    window.newUploadedFiles.forEach((file, i) => {
         file.isProfile = (i === index);
     });
     
@@ -307,7 +320,7 @@ function removeNewImage(index) {
     }).then((result) => {
         if (result.isConfirmed) {
             // Eliminar del array
-            newUploadedFiles.splice(index, 1);
+            window.newUploadedFiles.splice(index, 1);
             
             // Actualizar la vista
             updateNewImagesPreview();
@@ -316,7 +329,7 @@ function removeNewImage(index) {
             
             // Mostrar mensaje si no quedan imágenes
             const remainingExisting = $('.image-item[data-type="existing"]').not('.to-be-deleted').length;
-            const remainingNew = newUploadedFiles.length;
+            const remainingNew = window.newUploadedFiles ? window.newUploadedFiles.length : 0;
             
             if (remainingExisting === 0 && remainingNew === 0) {
                 $('#noImagesMessage').show();
@@ -331,17 +344,20 @@ function removeNewImage(index) {
 function updateNewFileInput() {
     const dt = new DataTransfer();
     
-    newUploadedFiles.forEach(fileData => {
-        dt.items.add(fileData.file);
-    });
+    if (window.newUploadedFiles) {
+        window.newUploadedFiles.forEach(fileData => {
+            dt.items.add(fileData.file);
+        });
+    }
     
     $('#new_images')[0].files = dt.files;
 }
 
 // Actualizar label del file input
 function updateFileLabel() {
-    const label = newUploadedFiles.length > 0 ? 
-        newUploadedFiles.length + ' nueva(s) imagen(es) seleccionada(s)' : 
+    const count = window.newUploadedFiles ? window.newUploadedFiles.length : 0;
+    const label = count > 0 ? 
+        count + ' nueva(s) imagen(es) seleccionada(s)' : 
         'Seleccione imágenes adicionales';
     $('.custom-file-label').text(label);
 }
@@ -353,12 +369,15 @@ $(document).on('mouseenter', '.image-item', function() {
     $(this).find('.remove-existing-image, .remove-new-image').hide();
 });
 
-// Inicializar cuando se muestra el modal
+// INICIALIZACIÓN CORREGIDA - Se ejecuta cada vez que se carga el contenido del modal
 $(document).ready(function() {
-    $('.remove-existing-image, .remove-new-image').hide();
+    console.log('🚀 Documento listo, inicializando EDIT modal');
     
-    // Inicializar el modal - RESETEAR ESTADO
-    initializeEditModal();
+    // Inicializar estado
+    initializeEditModalState();
+    
+    // Ocultar botones eliminar inicialmente
+    $('.remove-existing-image, .remove-new-image').hide();
     
     // Establecer la primera imagen como perfil por defecto si no hay ninguna seleccionada
     @if($vehicle->vehicleImages->count() > 0 && !$vehicle->vehicleImages->where('profile', 1)->first())
@@ -367,21 +386,39 @@ $(document).ready(function() {
     @endif
 });
 
-// También inicializar cuando se abre el modal via AJAX
+// También inicializar cuando el modal se muestra (por si se carga via AJAX)
 $(document).on('shown.bs.modal', '#modal', function() {
-    initializeEditModal();
+    console.log('🔍 Modal mostrado, reinicializando estado');
+    initializeEditModalState();
+});
+
+// Cuando se cierra el modal, no hacer nada (mantener estado para debugging)
+$(document).on('hidden.bs.modal', '#modal', function() {
+    console.log('📌 Modal cerrado, estado mantenido para debugging');
+});
+
+// Cuando se guarda exitosamente, limpiar el estado
+$(document).on('ajax:success', '#editForm', function() {
+    console.log('✅ Guardado exitoso, limpiando estado');
+    initializeEditModalState();
 });
 
 // Validación antes de guardar
 $('#editForm').on('submit', function(e) {
     const remainingExisting = $('.image-item[data-type="existing"]').not('.to-be-deleted').length;
-    const remainingNew = newUploadedFiles.length;
+    const remainingNew = window.newUploadedFiles ? window.newUploadedFiles.length : 0;
     
     if (remainingExisting === 0 && remainingNew === 0) {
         e.preventDefault();
         Swal.fire('Error', 'Debe haber al menos una imagen para el vehículo', 'error');
         return false;
     }
+    
+    console.log('📤 Enviando formulario con:', {
+        existing: remainingExisting,
+        new: remainingNew,
+        toDelete: window.imagesToDelete ? window.imagesToDelete.length : 0
+    });
 });
 </script>
 
