@@ -14,7 +14,7 @@ use App\Http\Controllers\admin\VehicleImageController;
 
 Route::get('/',[AdminController::class,'index'])->name('admin.index');
 Route::resource('brands', BrandController::class)->names('admin.brands');
-Route::resource('brandmodels', BrandmodelController::class)->names('admin.brandmodels');
+Route::resource('brandmodels', BrandModelController::class)->names('admin.brandmodels');
 Route::resource('vehicletypes', VehicleTypeController::class)->names('admin.vehicletypes');
 Route::resource('colors', ColorController::class)->names('admin.colors');
 Route::resource('vehicles', VehicleController::class)->names('admin.vehicles');
