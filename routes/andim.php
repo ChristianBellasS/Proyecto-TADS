@@ -37,3 +37,6 @@ Route::resource('vehicleimages', VehicleImageController::class)->names('admin.ve
 Route::get('vehicleimages/vehicle/{vehicle_id}', [VehicleImageController::class, 'getImagesByVehicle'])->name('admin.vehicleimages.by_vehicle');
 Route::get('admin/vehicleimages/vehicle/{vehicle_id}', [VehicleImageController::class, 'getImagesByVehicle']);
 Route::post('vehicleimages/set-profile/{id}', [VehicleImageController::class, 'setAsProfile'])->name('admin.vehicleimages.set_profile');
+
+#FUNCIONES - VEHICLES
+Route::get('/admin/vehicles/get-models/{brandId}', [VehicleController::class, 'getModelsByBrand'])->name('admin.vehicles.get-models');

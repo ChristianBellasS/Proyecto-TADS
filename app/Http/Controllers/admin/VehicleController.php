@@ -188,4 +188,33 @@ class VehicleController extends Controller
         $vehicle->delete();
         return redirect()->route('admin.vehicles.index')->with('action', 'Vehículo eliminado exitosamente.');
     }
+
+    public function getModelsByBrand($brandId)
+    {
+        try {
+            \Log::info("Solicitando modelos para marca ID: " . $brandId);
+            
+            // Verificar que la marca existe
+            $brand = Brand::find($brandId);
+            if (!$brand) {
+                \Log::warning("Marca no encontrada ID: " . $brandId);
+                return response()->json([], 404);
+            }
+            
+            $models = BrandModel::where('brand_id', $brandId)->get();
+            
+            \Log::info("Modelos encontrados para marca {$brandId} ({$brand->name}): " . $models->count());
+            
+            // Log de los modelos encontrados
+            foreach ($models as $model) {
+                \Log::info(" - Modelo: {$model->id} - {$model->name}");
+            }
+            
+            return response()->json($models);
+            
+        } catch (\Throwable $th) {
+            \Log::error("Error al obtener modelos para marca {$brandId}: " . $th->getMessage());
+            return response()->json(['error' => 'Error al cargar los modelos: ' . $th->getMessage()], 500);
+        }
+    }
 }

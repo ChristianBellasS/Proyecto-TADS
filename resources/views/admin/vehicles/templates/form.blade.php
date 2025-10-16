@@ -98,20 +98,68 @@
         </div>
     </div>
 </div>
-
 <script>
-// Cuando se carga el formulario, convertir la placa a mayúsculas
-document.addEventListener('DOMContentLoaded', function() {
-    const plateInput = document.getElementById('plate');
-    if (plateInput) {
-        plateInput.addEventListener('input', function() {
-            this.value = this.value.toUpperCase();
-        });
+$(document).ready(function() {
+    // Formatear placa
+    $('#plate').on('input', function() {
+        $(this).val($(this).val().toUpperCase().replace(/[^A-Z0-9-]/g, ''));
+    });
+
+    // Cargar modelos cuando cambia la marca
+    $('#brand_id').change(function() {
+        var brandId = $(this).val();
+        var modelSelect = $('#model_id');
         
-        // Si estamos editando, asegurar que la placa esté en mayúsculas
-        if (plateInput.value) {
-            plateInput.value = plateInput.value.toUpperCase();
+        console.log('Marca cambiada:', brandId);
+        
+        if (brandId) {
+            modelSelect.html('<option value="">Cargando modelos...</option>');
+            modelSelect.prop('disabled', true);
+            
+            $.ajax({
+                url: '{{ route("admin.vehicles.get-models", ["brandId" => "PLACEHOLDER"]) }}'.replace('PLACEHOLDER', brandId),
+                type: 'GET',
+                dataType: 'json',
+                success: function(models) {
+                    console.log('Modelos recibidos:', models);
+                    
+                    modelSelect.html('<option value="">Seleccione un modelo</option>');
+                    
+                    if (models && models.length > 0) {
+                        $.each(models, function(index, model) {
+                            modelSelect.append($('<option>', {
+                                value: model.id,
+                                text: model.name
+                            }));
+                        });
+                    } else {
+                        modelSelect.html('<option value="">No hay modelos disponibles</option>');
+                    }
+                    
+                    modelSelect.prop('disabled', false);
+                    
+                    // Seleccionar modelo actual en edición
+                    @if(isset($vehicle) && $vehicle->model_id)
+                        modelSelect.val('{{ $vehicle->model_id }}');
+                    @endif
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error en AJAX:', error);
+                    modelSelect.html('<option value="">Error al cargar modelos</option>');
+                    modelSelect.prop('disabled', false);
+                }
+            });
+        } else {
+            modelSelect.html('<option value="">Primero seleccione una marca</option>');
+            modelSelect.prop('disabled', true);
         }
-    }
+    });
+
+    // Cargar modelos inicial si hay marca seleccionada
+    @if(isset($vehicle) && $vehicle->brand_id)
+        setTimeout(function() {
+            $('#brand_id').val('{{ $vehicle->brand_id }}').trigger('change');
+        }, 500);
+    @endif
 });
 </script>
