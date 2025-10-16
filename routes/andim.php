@@ -34,9 +34,10 @@ Route::get('admin/get-districts/{province}', [DistrictController::class, 'getDis
 Route::resource('vehicleimages', VehicleImageController::class)->names('admin.vehicleimages');
 
 #FUNCIONES - VEHICLEIMAGES
-Route::get('vehicleimages/vehicle/{vehicle_id}', [VehicleImageController::class, 'getImagesByVehicle'])->name('admin.vehicleimages.by_vehicle');
-Route::get('admin/vehicleimages/vehicle/{vehicle_id}', [VehicleImageController::class, 'getImagesByVehicle']);
-Route::post('vehicleimages/set-profile/{id}', [VehicleImageController::class, 'setAsProfile'])->name('admin.vehicleimages.set_profile');
+Route::get('/admin/vehicleimages/vehicle/{vehicle_id}', [VehicleImageController::class, 'getImagesByVehicle'])->name('admin.vehicleimages.by-vehicle');
+Route::post('/admin/vehicleimages/set-profile/{id}', [VehicleImageController::class, 'setAsProfile'])->name('admin.vehicleimages.set-profile');
+Route::delete('/admin/vehicleimages/image/{id}', [VehicleImageController::class, 'destroyImage'])->name('admin.vehicleimages.destroy-image');
+Route::resource('/admin/vehicleimages', VehicleImageController::class)->names('admin.vehicleimages');
 
 #FUNCIONES - VEHICLES
 Route::get('/admin/vehicles/get-models/{brandId}', [VehicleController::class, 'getModelsByBrand'])->name('admin.vehicles.get-models');

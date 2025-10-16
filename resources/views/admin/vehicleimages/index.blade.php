@@ -6,7 +6,7 @@
     <button type="button" class="btn btn-success float-right" id="btnRegistrar">
         <i class="fa fa-plus"></i> Nueva Imagen
     </button>
-    <h1>Listado de Imágenes</h1>
+    <h1>Listado de Imágenes por Vehículo</h1>
 @stop
 
 @section('content')
@@ -16,12 +16,13 @@
                 <table class="table table-bordered table-striped" id="table">
                     <thead>
                         <tr>
-                            <th>Imagen</th>
-                            <th>Vehículo ID</th>
+                            <th>Imagen Perfil</th>
+                            <th>Vehículo</th>
+                            <th>ID Vehículo</th>
+                            <th>Cantidad Imágenes</th>
                             <th>Creado</th>
                             <th>Actualizado</th>
-                            <th width="10px"></th>
-                            <th width="10px"></th>
+                            <th width="100px">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -73,7 +74,7 @@
         <!-- 🔹 Botones para establecer como perfil y eliminar -->
         <div class="text-center mt-3">
           <button id="btnSetProfile" class="btn btn-primary btn-lg mr-2" data-image-id="">
-            <i class="fas fa-star"></i> Establecer como perfil
+            <i class="fas fa-crown"></i> Establecer como perfil
           </button>
           <button id="btnDeleteImage" class="btn btn-danger btn-lg" data-image-id="">
             <i class="fas fa-trash"></i> Eliminar foto
@@ -89,47 +90,50 @@
     <script>
         $(document).ready(function() {
 
-            // Inicialización DataTable (sin columna "Perfil")
+            // Inicialización DataTable
             $('#table').DataTable({
                 "ajax": "{{ route('admin.vehicleimages.index') }}",
                 "columns": [
                     { "data": "image", "orderable": false, "searchable": false },
+                    { "data": "vehicle_name" },
                     { "data": "vehicle_id" },
+                    { "data": "images_count", "orderable": false, "searchable": false },
                     { "data": "created_at" },
                     { "data": "updated_at" },
-                    { "data": "edit", "orderable": false, "searchable": false },
-                    { "data": "delete", "orderable": false, "searchable": false }
+                    { "data": "actions", "orderable": false, "searchable": false }
                 ],
                 "language": {
                     "url": "https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json"
                 }
             });
 
-            // Eliminar con confirmación
-            $(document).on('click', '.frmDelete', function(event) {
-                event.preventDefault();
-                let form = $(this);
+            // Eliminar TODAS las imágenes del vehículo
+            $(document).on('click', '.btnEliminar', function() {
+                const vehicleId = $(this).data('id');
 
                 Swal.fire({
                     title: '¿Estás seguro?',
-                    text: "¡Esta acción no se puede deshacer!",
+                    text: "Se eliminarán TODAS las imágenes de este vehículo",
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'Sí, eliminar'
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Sí, eliminar todo'
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $.ajax({
-                            url: form.attr('action'),
-                            type: 'POST',
-                            data: form.serialize(),
+                            url: "{{ url('admin/vehicleimages') }}/" + vehicleId,
+                            type: 'DELETE',
+                            data: {
+                                _token: "{{ csrf_token() }}"
+                            },
                             success: function(response) {
                                 refreshTable();
                                 Swal.fire('Eliminado!', response.message, 'success');
                             },
-                            error: function() {
-                                Swal.fire('Error', 'Hubo un problema al eliminar.', 'error');
+                            error: function(xhr) {
+                                console.error('Error:', xhr);
+                                Swal.fire('Error', 'No se pudieron eliminar las imágenes', 'error');
                             }
                         });
                     }
@@ -143,9 +147,10 @@
                     type: "GET",
                     success: function(response) {
                         $('#modalBody').html(response);
-                        $('#modalTitle').text('Nueva Imagen');
+                        $('#modalTitle').text('Subir Imágenes al Vehículo');
                         $('#modal').modal('show');
 
+                        // Manejar el envío del formulario dentro del modal
                         $('#modal form').on('submit', function(e) {
                             e.preventDefault();
                             let form = $(this);
@@ -162,8 +167,12 @@
                                     refreshTable();
                                     Swal.fire('Éxito!', response.message, 'success');
                                 },
-                                error: function(response) {
-                                    Swal.fire('Error', response.responseJSON.message, 'error');
+                                error: function(xhr) {
+                                    let errorMessage = 'Error al guardar las imágenes';
+                                    if (xhr.responseJSON && xhr.responseJSON.errors) {
+                                        errorMessage = Object.values(xhr.responseJSON.errors).join('<br>');
+                                    }
+                                    Swal.fire('Error', errorMessage, 'error');
                                 }
                             });
                         });
@@ -179,9 +188,10 @@
                     type: 'GET',
                     success: function(response) {
                         $('#modalBody').html(response);
-                        $('#modalTitle').text('Editar Imagen');
+                        $('#modalTitle').text('Gestionar Imágenes del Vehículo');
                         $('#modal').modal('show');
 
+                        // Manejar el envío del formulario dentro del modal
                         $('#modal form').on('submit', function(e) {
                             e.preventDefault();
                             let form = $(this);
@@ -198,8 +208,12 @@
                                     refreshTable();
                                     Swal.fire('Éxito!', response.message, 'success');
                                 },
-                                error: function(response) {
-                                    Swal.fire('Error', response.responseJSON.message, 'error');
+                                error: function(xhr) {
+                                    let errorMessage = 'Error al actualizar las imágenes';
+                                    if (xhr.responseJSON && xhr.responseJSON.errors) {
+                                        errorMessage = Object.values(xhr.responseJSON.errors).join('<br>');
+                                    }
+                                    Swal.fire('Error', errorMessage, 'error');
                                 }
                             });
                         });
@@ -227,9 +241,7 @@
                 url: "{{ url('admin/vehicleimages/vehicle') }}/" + vehicleId,
                 type: 'GET',
                 success: function(response) {
-                    console.log('Respuesta del servidor:', response);
-
-                    currentImages = response.images; // Guardar las imágenes
+                    currentImages = response.images;
                     const carouselInner = $('#vehicleCarousel .carousel-inner');
                     carouselInner.empty();
 
@@ -244,12 +256,13 @@
                     } else {
                         response.images.forEach((img, index) => {
                             const activeClass = index === 0 ? 'active' : '';
-                            const profileBadge = img.is_profile ? '<span class="badge badge-success position-absolute" style="top: 10px; right: 10px; font-size: 16px;"><i class="fas fa-star"></i> Perfil Actual</span>' : '';
+                            const crownIcon = img.is_profile ? 
+                                '<div class="position-absolute" style="top: 15px; right: 15px;"><i class="fas fa-crown text-warning" style="font-size: 30px;"></i></div>' : '';
                             
                             carouselInner.append(`
                                 <div class="carousel-item ${activeClass}" data-image-id="${img.id}">
                                     <div class="position-relative">
-                                        ${profileBadge}
+                                        ${crownIcon}
                                         <img src="${img.url}" class="d-block w-100 rounded shadow" alt="Imagen del vehículo" style="max-height: 500px; object-fit: contain;">
                                     </div>
                                 </div>
@@ -290,12 +303,14 @@
                     $('#btnSetProfile')
                         .removeClass('btn-primary')
                         .addClass('btn-success')
-                        .html('<i class="fas fa-check"></i> Esta es la imagen de perfil');
+                        .html('<i class="fas fa-crown"></i> Esta es la imagen de perfil')
+                        .prop('disabled', true);
                 } else {
                     $('#btnSetProfile')
                         .removeClass('btn-success')
                         .addClass('btn-primary')
-                        .html('<i class="fas fa-star"></i> Establecer como perfil');
+                        .html('<i class="fas fa-crown"></i> Establecer como perfil')
+                        .prop('disabled', false);
                 }
             }
         }
@@ -327,18 +342,18 @@
                     const activeIndex = $('#vehicleCarousel .carousel-item.active').index();
                     updateProfileButton(activeIndex);
                     
-                    // Actualizar badges en el carrusel
+                    // Actualizar coronas en el carrusel
                     $('#vehicleCarousel .carousel-item').each(function(index) {
-                        $(this).find('.badge').remove();
+                        $(this).find('.fa-crown').remove();
                         if (currentImages[index].is_profile) {
                             $(this).find('.position-relative').prepend(
-                                '<span class="badge badge-success position-absolute" style="top: 10px; right: 10px; font-size: 16px;"><i class="fas fa-star"></i> Perfil Actual</span>'
+                                '<div class="position-absolute" style="top: 15px; right: 15px;"><i class="fas fa-crown text-warning" style="font-size: 30px;"></i></div>'
                             );
                         }
                     });
                     
                     // Refrescar la tabla
-                    $('#table').DataTable().ajax.reload();
+                    refreshTable();
                 },
                 error: function(xhr) {
                     console.error('Error:', xhr);
@@ -368,10 +383,9 @@
                 if (result.isConfirmed) {
                     $.ajax({
                         url: "{{ url('admin/vehicleimages') }}/" + imageId,
-                        type: 'POST',
+                        type: 'DELETE',
                         data: {
-                            _token: "{{ csrf_token() }}",
-                            _method: 'DELETE'
+                            _token: "{{ csrf_token() }}"
                         },
                         success: function(response) {
                             Swal.fire('Eliminado!', response.message, 'success');
@@ -392,12 +406,13 @@
                                 
                                 currentImages.forEach((img, index) => {
                                     const activeClass = index === 0 ? 'active' : '';
-                                    const profileBadge = img.is_profile ? '<span class="badge badge-success position-absolute" style="top: 10px; right: 10px; font-size: 16px;"><i class="fas fa-star"></i> Perfil Actual</span>' : '';
+                                    const crownIcon = img.is_profile ? 
+                                        '<div class="position-absolute" style="top: 15px; right: 15px;"><i class="fas fa-crown text-warning" style="font-size: 30px;"></i></div>' : '';
                                     
                                     carouselInner.append(`
                                         <div class="carousel-item ${activeClass}" data-image-id="${img.id}">
                                             <div class="position-relative">
-                                                ${profileBadge}
+                                                ${crownIcon}
                                                 <img src="${img.url}" class="d-block w-100 rounded shadow" alt="Imagen del vehículo" style="max-height: 500px; object-fit: contain;">
                                             </div>
                                         </div>
@@ -409,7 +424,7 @@
                             }
                             
                             // Refrescar la tabla
-                            $('#table').DataTable().ajax.reload();
+                            refreshTable();
                         },
                         error: function(xhr) {
                             console.error('Error:', xhr);
@@ -419,6 +434,10 @@
                 }
             });
         });
+
+        function refreshTable() {
+            $('#table').DataTable().ajax.reload();
+        }
 
     </script>
 @stop

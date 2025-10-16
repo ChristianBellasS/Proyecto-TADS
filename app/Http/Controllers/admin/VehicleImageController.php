@@ -5,6 +5,7 @@ namespace App\Http\Controllers\admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\VehicleImage;
+use App\Models\Vehicle;
 use Illuminate\Support\Facades\Storage;
 
 class VehicleImageController extends Controller
@@ -12,33 +13,46 @@ class VehicleImageController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $images = VehicleImage::where('profile', 1)->get();
+            // Agrupar por vehículo y contar imágenes
+            $vehicles = Vehicle::withCount('vehicleImages')
+                ->with(['vehicleImages' => function($query) {
+                    $query->where('profile', 1)->orWhereNull('profile');
+                }])
+                ->has('vehicleImages') // Solo vehículos con imágenes
+                ->get();
 
-            $data = $images->map(function ($img) {
+            $data = $vehicles->map(function ($vehicle) {
+                $profileImage = $vehicle->vehicleImages->firstWhere('profile', 1) ?? $vehicle->vehicleImages->first();
+                
                 return [
-                    'image' => '<img src="' . asset('storage/' . $img->image) . '" 
-                                data-vehicle="' . $img->vehicle_id . '" 
-                                class="img-preview" width="70" height="70" style="cursor:pointer;">',
-                    'vehicle_id' => $img->vehicle_id,
-                    'profile' => $img->profile ? 'Sí' : 'No',
-                    'created_at' => $img->created_at->format('Y-m-d H:i'),
-                    'updated_at' => $img->updated_at->format('Y-m-d H:i'),
-                    'edit' => '<button class="btn btn-warning btn-sm btnEditar" data-id="' . $img->id . '">
+                    'image' => $profileImage ? 
+                        '<img src="' . asset('storage/' . $profileImage->image) . '" 
+                                data-vehicle="' . $vehicle->id . '" 
+                                class="img-preview" width="70" height="70" style="cursor:pointer; object-fit: cover; border-radius: 5px;">' :
+                        '<img src="' . asset('images/no_logo.png') . '" width="70" height="70" style="object-fit: cover; border-radius: 5px;">',
+                    'vehicle_name' => $vehicle->name ?? 'Vehículo #' . $vehicle->id,
+                    'vehicle_id' => $vehicle->id,
+                    'images_count' => '<span class="badge badge-info">' . $vehicle->vehicle_images_count . ' imagen(es)</span>',
+                    'profile_set' => $profileImage ? '<span class="badge badge-success">Sí</span>' : '<span class="badge badge-secondary">No</span>',
+                    'created_at' => $vehicle->created_at->format('Y-m-d H:i'),
+                    'updated_at' => $vehicle->updated_at->format('Y-m-d H:i'),
+                    'actions' => '
+                        <div class="btn-group">
+                            <button class="btn btn-warning btn-sm btnEditar" data-id="' . $vehicle->id . '" title="Gestionar Imágenes">
                                 <i class="fa-solid fa-pen-to-square"></i>
-                            </button>',
-                    'delete' => '<form action="' . route('admin.vehicleimages.destroy', $img->id) . '" method="POST" class="frmDelete">'
-                                . csrf_field() . method_field('DELETE') . '
-                                <button type="submit" class="btn btn-danger btn-sm">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </form>',
+                            </button>
+                            <button class="btn btn-danger btn-sm btnEliminar" data-id="' . $vehicle->id . '" title="Eliminar Todas las Imágenes">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>',
                 ];
             });
 
             return response()->json(['data' => $data]);
         }
 
-        return view('admin.vehicleimages.index');
+        $vehicles = Vehicle::all();
+        return view('admin.vehicleimages.index', compact('vehicles'));
     }
 
     // 🔹 Devuelve todas las imágenes de un vehículo (para el carrusel) con sus IDs
@@ -55,6 +69,13 @@ class VehicleImageController extends Controller
                 ];
             })
         ]);
+    }
+
+    // 🔹 Obtener vehículos para select
+    public function getVehicles()
+    {
+        $vehicles = Vehicle::select('id', 'name')->get();
+        return response()->json($vehicles);
     }
 
     // 🔹 Nuevo método para establecer imagen como perfil
@@ -79,95 +100,161 @@ class VehicleImageController extends Controller
 
     public function create()
     {
-        return view('admin.vehicleimages.create');
+        $vehicles = Vehicle::all();
+        return view('admin.vehicleimages.create', compact('vehicles'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'image' => 'required|image|max:2048',
-            'profile' => 'nullable|integer',
-            'vehicle_id' => 'required|integer',
+            'images' => 'required|array|min:1',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'vehicle_id' => 'required|exists:vehicles,id',
+            'profile_image_index' => 'required|integer|min:0',
         ]);
 
-        $path = $request->file('image')->store('vehicleimages', 'public');
-        $isProfile = $request->profile == 1;
+        $uploadedImages = [];
+        $profileImageIndex = $request->profile_image_index;
 
-        // 🔹 Si se marca como perfil, desactivar cualquier otra imagen de perfil del mismo vehículo
-        if ($isProfile) {
-            VehicleImage::where('vehicle_id', $request->vehicle_id)
-                        ->where('profile', 1)
-                        ->update(['profile' => 0]);
+        foreach ($request->file('images') as $index => $image) {
+            $path = $image->store('vehicleimages', 'public');
+            
+            // Establecer como perfil si coincide con el índice
+            $isProfile = $index == $profileImageIndex ? 1 : 0;
+
+            $vehicleImage = VehicleImage::create([
+                'image' => $path,
+                'profile' => $isProfile,
+                'vehicle_id' => $request->vehicle_id,
+            ]);
+
+            $uploadedImages[] = $vehicleImage;
         }
-
-        // 🔹 Crear la nueva imagen (sea perfil o no)
-        VehicleImage::create([
-            'image' => $path,
-            'profile' => $isProfile ? 1 : 0,
-            'vehicle_id' => $request->vehicle_id,
-        ]);
 
         if ($request->ajax()) {
-            return response()->json(['message' => 'Imagen registrada exitosamente']);
+            return response()->json([
+                'message' => count($uploadedImages) . ' imagen(es) registrada(s) exitosamente para el vehículo',
+                'images_count' => count($uploadedImages)
+            ]);
         }
 
-        return redirect()->route('admin.vehicleimages.index');
+        return redirect()->route('admin.vehicleimages.index')
+                        ->with('success', count($uploadedImages) . ' imagen(es) registrada(s) exitosamente');
     }
 
     public function edit($id)
     {
-        $image = VehicleImage::findOrFail($id);
-        return view('admin.vehicleimages.edit', compact('image'));
+        $vehicle = Vehicle::with('vehicleImages')->findOrFail($id);
+        $vehicles = Vehicle::all();
+        
+        return view('admin.vehicleimages.edit', compact('vehicle', 'vehicles'));
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, $vehicle_id)
     {
         $request->validate([
-            'image' => 'nullable|image|max:2048',
-            'profile' => 'nullable|integer',
+            'profile_image_id' => 'nullable|exists:vehicleimages,id',
+            'new_images' => 'nullable|array',
+            'new_images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'images_to_delete' => 'nullable|string',
         ]);
 
-        $image = VehicleImage::findOrFail($id);
+        // Eliminar imágenes marcadas para eliminación
+        if ($request->has('images_to_delete') && !empty($request->images_to_delete)) {
+            $imagesToDelete = explode(',', $request->images_to_delete);
+            
+            foreach ($imagesToDelete as $imageId) {
+                $image = VehicleImage::find($imageId);
+                if ($image) {
+                    // Eliminar archivo físico
+                    if ($image->image && Storage::disk('public')->exists($image->image)) {
+                        Storage::disk('public')->delete($image->image);
+                    }
+                    // Eliminar de la base de datos
+                    $image->delete();
+                }
+            }
+        }
 
-        if ($request->hasFile('image')) {
+        // Establecer imagen de perfil si se especificó una existente
+        if ($request->has('profile_image_id') && $request->profile_image_id) {
+            VehicleImage::where('vehicle_id', $vehicle_id)
+                        ->update(['profile' => 0]);
+            
+            $profileImage = VehicleImage::find($request->profile_image_id);
+            if ($profileImage) {
+                $profileImage->profile = 1;
+                $profileImage->save();
+            }
+        }
+
+        // Agregar nuevas imágenes si existen
+        if ($request->hasFile('new_images')) {
+            foreach ($request->file('new_images') as $image) {
+                $path = $image->store('vehicleimages', 'public');
+                
+                VehicleImage::create([
+                    'image' => $path,
+                    'profile' => 0, // Las nuevas imágenes no son perfil por defecto
+                    'vehicle_id' => $vehicle_id,
+                ]);
+            }
+        }
+
+        if ($request->ajax()) {
+            return response()->json(['message' => 'Imágenes actualizadas correctamente']);
+        }
+
+        return redirect()->route('admin.vehicleimages.index')
+                        ->with('success', 'Imágenes actualizadas correctamente');
+    }
+
+    public function destroy($id)
+    {
+        $vehicle = Vehicle::findOrFail($id);
+        $images = VehicleImage::where('vehicle_id', $id)->get();
+        $imagesCount = $images->count();
+
+        // Eliminar todas las imágenes físicas y de la base de datos
+        foreach ($images as $image) {
             if ($image->image && Storage::disk('public')->exists($image->image)) {
                 Storage::disk('public')->delete($image->image);
             }
-
-            $path = $request->file('image')->store('vehicleimages', 'public');
-            $image->image = $path;
+            $image->delete();
         }
 
-        if ($request->profile == 1) {
-            VehicleImage::where('vehicle_id', $image->vehicle_id)
-                        ->where('id', '!=', $image->id)
-                        ->update(['profile' => 0]);
-        }
-
-        $image->profile = $request->profile ?? 0;
-        $image->save();
-
-        if ($request->ajax()) {
-            return response()->json(['message' => 'Imagen actualizada correctamente']);
-        }
-
-        return redirect()->route('admin.vehicleimages.index');
+        return response()->json([
+            'message' => 'Todas las imágenes (' . $imagesCount . ') del vehículo fueron eliminadas correctamente',
+            'deleted_count' => $imagesCount
+        ]);
     }
 
-    public function destroy(Request $request, $id)
+    // 🔹 Eliminar imagen específica (desde el editor)
+    public function destroyImage(Request $request, $id)
     {
         $image = VehicleImage::findOrFail($id);
+        $vehicleId = $image->vehicle_id;
+        $wasProfile = $image->profile;
 
+        // Eliminar archivo físico
         if ($image->image && Storage::disk('public')->exists($image->image)) {
             Storage::disk('public')->delete($image->image);
         }
 
         $image->delete();
 
-        if ($request->ajax()) {
-            return response()->json(['message' => 'Imagen eliminada correctamente']);
+        // Si era la imagen de perfil, establecer una nueva
+        if ($wasProfile) {
+            $newProfile = VehicleImage::where('vehicle_id', $vehicleId)->first();
+            if ($newProfile) {
+                $newProfile->profile = 1;
+                $newProfile->save();
+            }
         }
 
-        return redirect()->route('admin.vehicleimages.index');
+        return response()->json([
+            'message' => 'Imagen eliminada correctamente',
+            'remaining_images' => VehicleImage::where('vehicle_id', $vehicleId)->count()
+        ]);
     }
 }
