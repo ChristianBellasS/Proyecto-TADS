@@ -4,44 +4,37 @@ namespace App\Http\Controllers\admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\BrandModel; // Importa el modelo BrandModel
-use App\Models\Brand; // Importa el modelo Brand
+use App\Models\BrandModel;
+use App\Models\Brand;
 use Yajra\DataTables\Facades\DataTables;
-use Illuminate\Support\Facades\Storage;  // Importa Storage aquí
 use Illuminate\Support\Facades\Log;
 
-class BrandmodelController extends Controller
+class BrandModelController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        $models = BrandModel::select(
-            'brandmodels.id',
-            'brandmodels.name as name',
-            'b.name as brandname',
-            'brandmodels.description as description',
-            'brandmodels.code as code',
-            'brandmodels.created_at as created_at',
-            'brandmodels.updated_at as updated_at'
-        )
-        ->join('brands as b', 'brandmodels.brand_id', '=', 'b.id');
+        $models = BrandModel::with('brand')->get();
 
         if ($request->ajax()) {
             return DataTables::of($models)
+                ->addColumn("brand", function ($model) {
+                    return $model->brand->name ?? 'N/A';
+                })
                 ->addColumn("edit", function ($model) {
                     return '<button class="btn btn-warning btn-sm btnEditar" data-id="' . $model->id . '"><i class="fas fa-pen"></i></button>';
                 })
                 ->addColumn("delete", function ($model) {
-                    return '<form action="' . route('admin.models.destroy', $model->id) . '" method="POST" class="frmDelete">' . 
+                    return '<form action="' . route('admin.brandmodels.destroy', $model->id) . '" method="POST" class="frmDelete">' . 
                         csrf_field() . method_field('DELETE') . 
                         '<button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button></form>';
                 })
-                ->rawColumns(['logo', 'edit', 'delete'])
+                ->rawColumns(['edit', 'delete'])
                 ->make(true);
         } else {
-            return view('admin.models.index', compact('models'));
+            return view('admin.brandmodels.index', compact('models'));
         }
     }
 
@@ -50,8 +43,8 @@ class BrandmodelController extends Controller
      */
     public function create()
     {
-        $brands = Brand::all()->pluck('name', 'id');
-        return view('admin.models.create', compact('brands'));
+        $brands = Brand::all();
+        return view('admin.brandmodels.create', compact('brands'));
     }
 
     /**
@@ -62,13 +55,19 @@ class BrandmodelController extends Controller
         try {
             // Validar los campos de la solicitud
             $request->validate([
-                'name' => 'required|string',
+                'name' => 'required|string|max:100',
+                'code' => 'required|string|max:100|unique:brandmodels',
                 'description' => 'nullable|string',
                 'brand_id' => 'required|exists:brands,id'
             ]);
 
             // Crear el nuevo BrandModel
-            BrandModel::create($request->all());
+            BrandModel::create([
+                'name' => $request->name,
+                'code' => $request->code,
+                'description' => $request->description,
+                'brand_id' => $request->brand_id
+            ]);
 
             return response()->json(['message' => 'Modelo creado exitosamente.'], 200);
         } catch (\Throwable $th) {
@@ -82,8 +81,8 @@ class BrandmodelController extends Controller
     public function edit(string $id)
     {
         $model = BrandModel::find($id);
-        $brands = Brand::all()->pluck('name', 'id');
-        return view('admin.models.edit', compact('model', 'brands'));
+        $brands = Brand::all();
+        return view('admin.brandmodels.edit', compact('model', 'brands'));
     }
 
     /**
@@ -101,13 +100,19 @@ class BrandmodelController extends Controller
 
             // Validar los campos de la solicitud
             $request->validate([
-                'name' => 'required|string',
+                'name' => 'required|string|max:100',
+                'code' => 'required|string|max:100|unique:brandmodels,code,' . $model->id,
                 'description' => 'nullable|string',
                 'brand_id' => 'required|exists:brands,id'
             ]);
 
             // Actualizar el modelo
-            $model->update($request->all());
+            $model->update([
+                'name' => $request->name,
+                'code' => $request->code,
+                'description' => $request->description,
+                'brand_id' => $request->brand_id
+            ]);
 
             return response()->json(['message' => 'Modelo actualizado exitosamente.'], 200);
         } catch (\Throwable $th) {
