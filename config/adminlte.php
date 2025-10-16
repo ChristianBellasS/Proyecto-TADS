@@ -344,7 +344,7 @@ return [
         ],
         [
             'text' => 'Tipos',
-            'url' => 'admin/vehiculos',
+            'url' => 'admin/vehicletypes',
             'icon' => 'fas fa-truck-loading',
         ],
         [
