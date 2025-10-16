@@ -339,7 +339,7 @@ return [
         ],
         [
             'text' => 'Modelos',
-            'url' => 'admin/brandmodel',
+            'url' => 'admin/brandmodels',
             'icon' => 'fas fa-trailer',
         ],
         [

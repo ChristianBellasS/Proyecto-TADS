@@ -1,25 +1,25 @@
 @extends('adminlte::page')
 
-@section('title', 'Dashboard')
+@section('title', 'Modelos de Vehículos')
 
 @section('content_header')
     <button type="button" class="btn btn-success float-right" id="btnRegistrar">
-        <i class="fa fa-plus"></i> Nueva Modelo
+        <i class="fa fa-plus"></i> Nuevo Modelo
     </button>
-    <h1>Lista de Modelos</h1>
+    <h1>Lista de Modelos de Vehículos</h1>
 @stop
 
 @section('content')
     <div class="card">
         <div class="card-body">
-            <div class="table-responsive"> <!-- Hacer la tabla responsiva -->
+            <div class="table-responsive">
                 <table class="table table-bordered table-striped" id="table">
                     <thead>
                         <tr>
-                            <th>Modelo</th>
+                            <th>Nombre</th>
+                            <th>Código</th>
                             <th>Marca</th>
-                            <th>Codigo</th>
-                            <th>Descripcion</th>
+                            <th>Descripción</th>
                             <th>Fecha Creación</th>
                             <th>Fecha Actualización</th>
                             <th width="10px"></th>
@@ -30,20 +30,18 @@
                         @foreach ($models as $model)
                             <tr>
                                 <td>{{ $model->name }}</td>
-                                <td>{{ $model->brandname }}</td>
                                 <td>{{ $model->code }}</td>
+                                <td>{{ $model->brand->name ?? 'N/A' }}</td>
                                 <td>{{ $model->description }}</td>
                                 <td>{{ $model->created_at }}</td>
                                 <td>{{ $model->updated_at }}</td>
-
                                 <td>
                                     <button class="btn btn-warning btn-sm btnEditar" data-id="{{ $model->id }}">
                                         <i class="fa-solid fa-pen-to-square"></i>
                                     </button>
                                 </td>
                                 <td>
-                                    <form action="{{ route('admin.models.destroy', $model->id) }}" method="POST"
-                                        class="frmDelete">
+                                    <form action="{{ route('admin.brandmodels.destroy', $model->id) }}" method="POST" class="frmDelete">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-danger btn-sm">
@@ -55,18 +53,17 @@
                         @endforeach
                     </tbody>
                 </table>
-            </div> <!-- Fin de la tabla responsiva -->
+            </div>
         </div>
     </div>
 @stop
 
 <!-- Modal -->
-<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered" role="document"> <!-- Centrar el modal -->
+<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="modalTitle">Formulario de Modelo</h5>
+                <h5 class="modal-title" id="modalTitle">Formulario de Modelos</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -84,31 +81,20 @@
         $(document).ready(function() {
             // Inicialización de DataTable
             $('#table').DataTable({
-                "ajax": "{{ route('admin.models.index') }}", // Usar el nombre correcto de la ruta
-                "columns": [{
-                        "data": "name",
-                    },
-                    {
-                        "data": "brandname",
-                    },
-                    {
-                        "data": "code",
-                    },
-                    {
-                        "data": "description",
-                    },
-                    {
-                        "data": "created_at",
-                    },
-                    {
-                        "data": "updated_at",
-                    },
-                    {
+                "ajax": "{{ route('admin.brandmodels.index') }}",
+                "columns": [
+                    { "data": "name" },
+                    { "data": "code" },
+                    { "data": "brand" },
+                    { "data": "description" },
+                    { "data": "created_at" },
+                    { "data": "updated_at" },
+                    { 
                         "data": "edit",
                         "orderable": false,
                         "searchable": false,
                     },
-                    {
+                    { 
                         "data": "delete",
                         "orderable": false,
                         "searchable": false,
@@ -119,7 +105,7 @@
                 }
             });
 
-            // Eliminar marca con confirmación de SweetAlert
+            // Eliminar modelo con confirmación de SweetAlert
             $(document).on('click', '.frmDelete', function(event) {
                 var form = $(this);
                 event.preventDefault();
@@ -130,7 +116,7 @@
                     showCancelButton: true,
                     confirmButtonColor: '#3085d6',
                     cancelButtonColor: '#d33',
-                    confirmButtonText: 'Sí, eliminarla!'
+                    confirmButtonText: 'Sí, eliminarlo!'
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $.ajax({
@@ -141,14 +127,14 @@
                                 refreshTable();
                                 Swal.fire(
                                     '¡Eliminado!',
-                                    'La marca ha sido eliminada.',
+                                    'El modelo ha sido eliminado.',
                                     'success'
                                 );
                             },
                             error: function(xhr) {
                                 Swal.fire(
                                     'Error',
-                                    'Hubo un problema al eliminar la marca.',
+                                    'Hubo un problema al eliminar el modelo.',
                                     'error'
                                 );
                             }
@@ -157,14 +143,14 @@
                 });
             });
 
-            // Abrir modal para crear una nueva marca
+            // Abrir modal para crear un nuevo modelo
             $('#btnRegistrar').click(function() {
                 $.ajax({
-                    url: "{{ route('admin.models.create') }}",
+                    url: "{{ route('admin.brandmodels.create') }}",
                     type: "GET",
                     success: function(response) {
                         $('#modal .modal-body').html(response);
-                        $('#modal .modal-title').html("Nueva marca");
+                        $('#modal .modal-title').html("Nuevo Modelo");
                         $('#modal').modal('show');
 
                         // Manejar el envío del formulario dentro del modal
@@ -200,24 +186,22 @@
                         });
                     },
                     error: function(xhr, status, error) {
-                        console.log(xhr, status, error); // Depurar si la petición AJAX falla
+                        console.log(xhr, status, error);
                     }
                 });
             });
 
-            // Abrir modal para editar una marca existente
+            // Abrir modal para editar un modelo existente
             $(document).on('click', '.btnEditar', function() {
-                var id = $(this).data('id'); // Obtener el id de la marca seleccionada
+                var id = $(this).data('id');
                 $.ajax({
-                    url: "{{ url('admin/models') }}/" + id +
-                        "/edit", // Usamos la URL correcta para la edición
+                    url: "{{ url('admin/brandmodels') }}/" + id + "/edit",
                     type: 'GET',
                     dataType: 'html',
                     success: function(response) {
-                        $('#modalBody').html(
-                            response); // Cargar el formulario de edición en el modal
-                        $('#modalTitle').text('Editar Marca');
-                        $('#modal').modal('show'); // Mostrar el modal
+                        $('#modalBody').html(response);
+                        $('#modalTitle').text('Editar Modelo');
+                        $('#modal').modal('show');
 
                         // Manejar el envío del formulario dentro del modal
                         $('#modal form').on('submit', function(e) {
@@ -253,13 +237,12 @@
                     },
                     error: function(xhr) {
                         console.log('Error:', xhr);
-                        Swal.fire('Error', 'No se pudo cargar el formulario de edición',
-                            'error');
+                        Swal.fire('Error', 'No se pudo cargar el formulario de edición', 'error');
                     }
                 });
             });
 
-            // Función para refrescar la tabla después de agregar o eliminar una marca
+            // Función para refrescar la tabla
             function refreshTable() {
                 var table = $('#table').DataTable();
                 table.ajax.reload();
