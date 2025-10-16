@@ -51,7 +51,8 @@
                                     </button>
                                 </td>
                                 <td>
-                                    <form action="{{ route('admin.zones.destroy', $zone->id) }}" method="POST" class="frmDelete">
+                                    <form action="{{ route('admin.zones.destroy', $zone->id) }}" method="POST"
+                                        class="frmDelete">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-danger btn-sm">
@@ -69,7 +70,8 @@
 @stop
 
 <!-- Modal -->
-<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -166,14 +168,33 @@
                     },
                     error: function(xhr) {
                         console.log('Error:', xhr);
-                        Swal.fire('Error', 'No se pudo cargar el formulario de edición', 'error');
+                        Swal.fire('Error', 'No se pudo cargar el formulario de edición',
+                            'error');
                     }
                 });
             });
 
             // Función para refrescar la tabla
             function refreshTable() {
-                location.reload(); // Simple reload para este ejemplo
+                $.ajax({
+                    url: "{{ route('admin.zones.index') }}",
+                    type: "GET",
+                    success: function(response) {
+                        // Extraer solo la tabla del response
+                        const tempDiv = $('<div>').html(response);
+                        const newTable = tempDiv.find('.table-responsive').html();
+
+                        // Reemplazar solo la tabla
+                        $('.table-responsive').html(newTable);
+
+                        // Re-inicializar DataTable
+                        $('#table').DataTable({
+                            "language": {
+                                "url": "https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json"
+                            }
+                        });
+                    }
+                });
             }
 
             // Inicializar mapa (función placeholder)
@@ -183,13 +204,6 @@
             }
         });
     </script>
-
-
-<!-- Nuevo -->
- 
- <!--  FIn de nuevo -->
-
-
 
 @stop
 

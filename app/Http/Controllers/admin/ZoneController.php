@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Zone;
 use App\Models\District;
 use App\Models\ZoneCoord;
-use App\Models\Department; // 👈 AGREGA ESTA LÍNEA
+use App\Models\Department;
 
 
 use Illuminate\Http\Request;
@@ -32,12 +32,18 @@ class ZoneController extends Controller
             'name' => 'required|string|max:100',
             'description' => 'nullable|string',
             'district_id' => 'required|exists:districts,id',
+            'status' => 'required|in:0,1',
             'coordinates' => 'required|array|min:3',
             'coordinates.*.latitude' => 'required|numeric',
             'coordinates.*.longitude' => 'required|numeric',
         ]);
 
-        $zone = Zone::create($request->only(['name', 'description', 'district_id']));
+        $zone = Zone::create([
+            'name' => $request->name,
+            'description' => $request->description,
+            'district_id' => $request->district_id,
+            'status' => $request->status
+        ]);
 
         // Guardar coordenadas
         foreach ($request->coordinates as $index => $coord) {
@@ -74,12 +80,18 @@ class ZoneController extends Controller
             'name' => 'required|string|max:100',
             'description' => 'nullable|string',
             'district_id' => 'required|exists:districts,id',
+            'status' => 'required|in:0,1',
             'coordinates' => 'required|array|min:3',
             'coordinates.*.latitude' => 'required|numeric',
             'coordinates.*.longitude' => 'required|numeric',
         ]);
 
-        $zone->update($request->only(['name', 'description', 'district_id']));
+        $zone->update([
+            'name' => $request->name,
+            'description' => $request->description,
+            'district_id' => $request->district_id,
+            'status' => $request->status
+        ]);
 
         // Eliminar coordenadas existentes y crear nuevas
         $zone->coordinates()->delete();
