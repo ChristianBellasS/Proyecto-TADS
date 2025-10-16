@@ -20,9 +20,11 @@ class DatabaseSeeder extends Seeder
         // ]);
 
         $this->call([
-            DepartmentSeeder::class,
-            ProvinceSeeder::class,
-            DistrictSeeder::class,
+            // DepartmentSeeder::class,
+            // ProvinceSeeder::class,
+            // DistrictSeeder::class,
+            UbigeoSeeder::class,
+
         ]);
     }
 }
