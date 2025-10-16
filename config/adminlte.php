@@ -348,9 +348,9 @@ return [
             'icon' => 'fas fa-truck-loading',
         ],
         [
-            'text' => 'Vehiculos',
-            'url' => 'admin/settings',
-            'icon' => 'fas fa-truck-moving',
+            'text' => 'Colores',
+            'url' => 'admin/colors',
+            'icon' => 'fas fa-palette',
         ],
     ],
 
