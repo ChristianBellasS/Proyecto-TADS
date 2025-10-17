@@ -73,12 +73,12 @@
 
         <!-- 🔹 Botones para establecer como perfil y eliminar -->
         <div class="text-center mt-3">
-          <button id="btnSetProfile" class="btn btn-primary btn-lg mr-2" data-image-id="">
+          {{-- <button id="btnSetProfile" class="btn btn-primary btn-lg mr-2" data-image-id="">
             <i class="fas fa-crown"></i> Establecer como perfil
           </button>
           <button id="btnDeleteImage" class="btn btn-danger btn-lg" data-image-id="">
             <i class="fas fa-trash"></i> Eliminar foto
-          </button>
+          </button> --}}
         </div>
       </div>
     </div>
