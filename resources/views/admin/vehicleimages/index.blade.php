@@ -238,7 +238,7 @@
             const vehicleId = $(this).data('vehicle');
 
             $.ajax({
-                url: "{{ url('admin/vehicleimages/vehicle') }}/" + vehicleId,
+                url: "{{ route('admin.vehicleimages.by-vehicle', '') }}/" + vehicleId,
                 type: 'GET',
                 success: function(response) {
                     currentImages = response.images;
