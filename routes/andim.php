@@ -9,7 +9,6 @@ use App\Http\Controllers\admin\ColorController;
 use App\Http\Controllers\admin\VehicleController;
 use App\Http\Controllers\admin\ZoneController;
 use App\Http\Controllers\admin\DistrictController;
-
 use App\Http\Controllers\admin\VehicleImageController;
 
 Route::get('/',[AdminController::class,'index'])->name('admin.index');
@@ -33,11 +32,12 @@ Route::get('admin/get-districts/{province}', [DistrictController::class, 'getDis
 
 Route::resource('vehicleimages', VehicleImageController::class)->names('admin.vehicleimages');
 
-#FUNCIONES - VEHICLEIMAGES
-Route::get('/admin/vehicleimages/vehicle/{vehicle_id}', [VehicleImageController::class, 'getImagesByVehicle'])->name('admin.vehicleimages.by-vehicle');
-Route::post('/admin/vehicleimages/set-profile/{id}', [VehicleImageController::class, 'setAsProfile'])->name('admin.vehicleimages.set-profile');
-Route::delete('/admin/vehicleimages/image/{id}', [VehicleImageController::class, 'destroyImage'])->name('admin.vehicleimages.destroy-image');
-Route::resource('/admin/vehicleimages', VehicleImageController::class)->names('admin.vehicleimages');
+// Rutas de Imágenes dentro de Vehículos
+Route::get('vehicles/{id}/manage-images', [VehicleController::class, 'manageImages'])->name('admin.vehicles.manage-images');
+Route::post('vehicles/{id}/store-images', [VehicleController::class, 'storeImages'])->name('admin.vehicles.store-images');
+Route::post('vehicles/set-profile/{id}', [VehicleController::class, 'setAsProfile'])->name('admin.vehicles.set-profile');
+Route::delete('vehicles/delete-image/{id}', [VehicleController::class, 'destroyImage'])->name('admin.vehicles.delete-image');
+Route::get('vehicles/images-by-vehicle/{vehicle_id}', [VehicleController::class, 'getImagesByVehicle'])->name('admin.vehicles.images-by-vehicle');
 
 #FUNCIONES - VEHICLES
 Route::get('/admin/vehicles/get-models/{brandId}', [VehicleController::class, 'getModelsByBrand'])->name('admin.vehicles.get-models');

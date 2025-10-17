@@ -357,11 +357,11 @@ return [
             'url' => 'admin/vehicles',
             'icon' => 'fas fa-car',
         ],
-        [
-            'text' => 'Imágenes de vehículo',
-            'url' => 'admin/vehicleimages',
-            'icon' => 'fas fa-car',
-        ],
+        // [
+        //     'text' => 'Imágenes de vehículo',
+        //     'url' => 'admin/vehicleimages',
+        //     'icon' => 'fas fa-images',
+        // ],
         [
             'header' => 'Gestión de Zonas',
         ],

@@ -34,6 +34,18 @@ class Vehicle extends Model
         return $this->belongsTo(Color::class);
     }
 
+    public function vehicleImages()
+    {
+        return $this->hasMany(VehicleImage::class);
+    }
+
+    // Accesor para la imagen de perfil
+    public function getProfileImageAttribute()
+    {
+        $profileImage = $this->vehicleImages()->where('profile', 1)->first();
+        return $profileImage ? $profileImage->image_url : asset('images/no_logo.png');
+    }
+
     // Accesor para el estado
     public function getStatusTextAttribute()
     {
@@ -52,8 +64,16 @@ class Vehicle extends Model
         return $plate;
     }
 
-    public function vehicleImages()
+    // Contar imágenes
+    public function getImagesCountAttribute()
     {
-        return $this->hasMany(VehicleImage::class);
+        return $this->vehicleImages()->count();
     }
+
+    // Verificar si tiene imágenes
+    public function getHasImagesAttribute()
+    {
+        return $this->vehicleImages()->exists();
+    }
+    
 }
