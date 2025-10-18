@@ -43,7 +43,7 @@
             <!-- Header elegante -->
             <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #035286, #034c7c);">
                 <h5 class="modal-title font-weight-bold">
-                    <i class="fas fa-car mr-2 text-warning"></i>Gestión de Vehículos
+                    <i class="fas fa-car mr-2 text-warning" id="modalTitle"></i>Formulario de Vehículos
                 </h5>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true" class="h5 mb-0">&times;</span>
@@ -239,7 +239,7 @@
                     dataType: 'html',
                     success: function(response) {
                         $('#modalBody').html(response);
-                        $('#modalTitle').text('Editar Vehículo');
+                        $('#modal .modal-title').html("Editar Vehículo");
                         $('#modal').modal('show');
 
                         // Manejar el envío del formulario de edición

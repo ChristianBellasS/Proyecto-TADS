@@ -65,9 +65,9 @@
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content border-0 shadow">
             <!-- Header elegante -->
-            <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #035286, #034c7c);">
+            <div class="modal-header text-white py-3"  style="background: linear-gradient(135deg, #035286, #034c7c);">
                 <h5 class="modal-title font-weight-bold">
-                    <i class="fas fa-car mr-2 text-warning"></i>Gestión de Vehículos
+                    <i class="fas fa-car mr-2 text-warning" id="modalTitle"></i>Formulario de Colores
                 </h5>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true" class="h5 mb-0">&times;</span>
@@ -81,6 +81,7 @@
         </div>
     </div>
 </div>
+
 
 @section('js')
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
@@ -211,7 +212,7 @@
                     dataType: 'html',
                     success: function(response) {
                         $('#modalBody').html(response);
-                        $('#modalTitle').text('Editar Color');
+                        $('#modal .modal-title').html("Editar color");
                         $('#modal').modal('show');
 
                         // Manejar el envío del formulario dentro del modal
