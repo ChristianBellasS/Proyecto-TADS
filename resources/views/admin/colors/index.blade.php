@@ -30,7 +30,9 @@
                         @foreach ($colors as $color)
                             <tr>
                                 <td>
-                                    <div style="width: 50px; height: 30px; background-color: {{ $color->code }}; border: 1px solid #ccc; border-radius: 4px;"></div>
+                                    <div
+                                        style="width: 50px; height: 30px; background-color: {{ $color->code }}; border: 1px solid #ccc; border-radius: 4px;">
+                                    </div>
                                 </td>
                                 <td>{{ $color->name }}</td>
                                 <td>{{ $color->code }}</td>
@@ -43,7 +45,8 @@
                                     </button>
                                 </td>
                                 <td>
-                                    <form action="{{ route('admin.colors.destroy', $color->id) }}" method="POST" class="frmDelete">
+                                    <form action="{{ route('admin.colors.destroy', $color->id) }}" method="POST"
+                                        class="frmDelete">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-danger btn-sm">
@@ -61,11 +64,12 @@
 @stop
 
 <!-- Modal -->
-<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content border-0 shadow">
             <!-- Header elegante -->
-            <div class="modal-header text-white py-3"  style="background: linear-gradient(135deg, #035286, #034c7c);">
+            <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #035286, #034c7c);">
                 <h5 class="modal-title font-weight-bold">
                     <i class="fas fa-car mr-2 text-warning" id="modalTitle"></i>Formulario de Colores
                 </h5>
@@ -90,23 +94,32 @@
             // Inicialización de DataTable
             $('#table').DataTable({
                 "ajax": "{{ route('admin.colors.index') }}",
-                "columns": [
-                    { 
+                "columns": [{
                         "data": "color_preview",
                         "orderable": false,
                         "searchable": false,
                     },
-                    { "data": "name" },
-                    { "data": "code" },
-                    { "data": "description" },
-                    { "data": "created_at" },
-                    { "data": "updated_at" },
-                    { 
+                    {
+                        "data": "name"
+                    },
+                    {
+                        "data": "code"
+                    },
+                    {
+                        "data": "description"
+                    },
+                    {
+                        "data": "created_at"
+                    },
+                    {
+                        "data": "updated_at"
+                    },
+                    {
                         "data": "edit",
                         "orderable": false,
                         "searchable": false,
                     },
-                    { 
+                    {
                         "data": "delete",
                         "orderable": false,
                         "searchable": false,
@@ -249,7 +262,8 @@
                     },
                     error: function(xhr) {
                         console.log('Error:', xhr);
-                        Swal.fire('Error', 'No se pudo cargar el formulario de edición', 'error');
+                        Swal.fire('Error', 'No se pudo cargar el formulario de edición',
+                            'error');
                     }
                 });
             });
@@ -265,4 +279,13 @@
 
 @section('css')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .nav-sidebar .nav-treeview {
+            margin-left: 20px;
+        }
+
+        .nav-sidebar .nav-treeview>.nav-item {
+            margin-left: 10px;
+        }
+    </style>
 @stop

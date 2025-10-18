@@ -35,7 +35,8 @@
 @stop
 
 <!-- Modal -->
-<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content border-0 shadow">
             <!-- Header elegante -->
@@ -63,18 +64,27 @@
             // Inicialización de DataTable
             var table = $('#table').DataTable({
                 "ajax": "{{ route('admin.usertypes.index') }}",
-                "columns": [
-                    { "data": "id" },
-                    { "data": "name" },
-                    { "data": "description" },
-                    { "data": "created_at" },
-                    { "data": "updated_at" },
-                    { 
+                "columns": [{
+                        "data": "id"
+                    },
+                    {
+                        "data": "name"
+                    },
+                    {
+                        "data": "description"
+                    },
+                    {
+                        "data": "created_at"
+                    },
+                    {
+                        "data": "updated_at"
+                    },
+                    {
                         "data": "edit",
                         "orderable": false,
                         "searchable": false
                     },
-                    { 
+                    {
                         "data": "delete",
                         "orderable": false,
                         "searchable": false
@@ -83,7 +93,9 @@
                 "language": {
                     "url": "https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json"
                 },
-                "order": [[0, "desc"]]
+                "order": [
+                    [0, "desc"]
+                ]
             });
 
             // Eliminar tipo de usuario con confirmación de SweetAlert
@@ -108,7 +120,8 @@
                                 table.ajax.reload();
                                 Swal.fire(
                                     '¡Eliminado!',
-                                    response.message || 'El tipo de usuario ha sido eliminado.',
+                                    response.message ||
+                                    'El tipo de usuario ha sido eliminado.',
                                     'success'
                                 );
                             },
@@ -116,7 +129,8 @@
                                 var error = xhr.responseJSON;
                                 Swal.fire(
                                     'Error',
-                                    error.message || 'Hubo un problema al eliminar el tipo de usuario.',
+                                    error.message ||
+                                    'Hubo un problema al eliminar el tipo de usuario.',
                                     'error'
                                 );
                             }
@@ -219,7 +233,8 @@
                     },
                     error: function(xhr) {
                         console.log('Error:', xhr);
-                        Swal.fire('Error', 'No se pudo cargar el formulario de edición', 'error');
+                        Swal.fire('Error', 'No se pudo cargar el formulario de edición',
+                            'error');
                     }
                 });
             });
@@ -229,4 +244,13 @@
 
 @section('css')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .nav-sidebar .nav-treeview {
+            margin-left: 20px;
+        }
+
+        .nav-sidebar .nav-treeview>.nav-item {
+            margin-left: 10px;
+        }
+    </style>
 @stop

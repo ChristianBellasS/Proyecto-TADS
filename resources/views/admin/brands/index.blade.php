@@ -59,7 +59,8 @@
 @stop
 
 <!-- Modal -->
-<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content border-0 shadow">
             <!-- Header elegante -->
@@ -203,11 +204,13 @@
             $(document).on('click', '.btnEditar', function() {
                 var id = $(this).data('id'); // Obtener el id de la marca seleccionada
                 $.ajax({
-                    url: "{{ url('admin/brands') }}/" + id + "/edit", // Usamos la URL correcta para la edición
+                    url: "{{ url('admin/brands') }}/" + id +
+                    "/edit", // Usamos la URL correcta para la edición
                     type: 'GET',
                     dataType: 'html',
                     success: function(response) {
-                        $('#modalBody').html(response); // Cargar el formulario de edición en el modal
+                        $('#modalBody').html(
+                        response); // Cargar el formulario de edición en el modal
                         $('#modal .modal-title').html("Editar marca");
                         $('#modal').modal('show'); // Mostrar el modal
 
@@ -245,7 +248,8 @@
                     },
                     error: function(xhr) {
                         console.log('Error:', xhr);
-                        Swal.fire('Error', 'No se pudo cargar el formulario de edición', 'error');
+                        Swal.fire('Error', 'No se pudo cargar el formulario de edición',
+                            'error');
                     }
                 });
             });
@@ -261,4 +265,13 @@
 
 @section('css')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .nav-sidebar .nav-treeview {
+            margin-left: 20px;
+        }
+
+        .nav-sidebar .nav-treeview>.nav-item {
+            margin-left: 10px;
+        }
+    </style>
 @stop

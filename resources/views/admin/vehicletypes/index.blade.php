@@ -37,7 +37,8 @@
                                     </button>
                                 </td>
                                 <td>
-                                    <form action="{{ route('admin.vehicletypes.destroy', $vehicleType->id) }}" method="POST" class="frmDelete">
+                                    <form action="{{ route('admin.vehicletypes.destroy', $vehicleType->id) }}"
+                                        method="POST" class="frmDelete">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-danger btn-sm">
@@ -55,7 +56,8 @@
 @stop
 
 <!-- Modal -->
-<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content border-0 shadow">
             <!-- Header elegante -->
@@ -83,17 +85,24 @@
             // Inicialización de DataTable
             $('#table').DataTable({
                 "ajax": "{{ route('admin.vehicletypes.index') }}",
-                "columns": [
-                    { "data": "name" },
-                    { "data": "description" },
-                    { "data": "created_at" },
-                    { "data": "updated_at" },
-                    { 
+                "columns": [{
+                        "data": "name"
+                    },
+                    {
+                        "data": "description"
+                    },
+                    {
+                        "data": "created_at"
+                    },
+                    {
+                        "data": "updated_at"
+                    },
+                    {
                         "data": "edit",
                         "orderable": false,
                         "searchable": false,
                     },
-                    { 
+                    {
                         "data": "delete",
                         "orderable": false,
                         "searchable": false,
@@ -236,7 +245,8 @@
                     },
                     error: function(xhr) {
                         console.log('Error:', xhr);
-                        Swal.fire('Error', 'No se pudo cargar el formulario de edición', 'error');
+                        Swal.fire('Error', 'No se pudo cargar el formulario de edición',
+                            'error');
                     }
                 });
             });
@@ -252,4 +262,13 @@
 
 @section('css')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .nav-sidebar .nav-treeview {
+            margin-left: 20px;
+        }
+
+        .nav-sidebar .nav-treeview>.nav-item {
+            margin-left: 10px;
+        }
+    </style>
 @stop
