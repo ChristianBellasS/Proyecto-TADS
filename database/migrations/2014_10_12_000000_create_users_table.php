@@ -14,13 +14,24 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->string('last_name');
+            $table->string('dni')->unique();
+            $table->date('birthdate')->nullable();
+            $table->string('license')->nullable();
+            $table->string('address')->nullable();
             $table->string('email')->unique();
+            $table->string('telefono')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->enum('estado', ['activo', 'inactivo'])->default('activo');
             $table->rememberToken();
-            $table->foreignId('current_team_id')->nullable();
+            $table->unsignedBigInteger('current_team_id')->nullable();
             $table->string('profile_photo_path', 2048)->nullable();
+            $table->unsignedBigInteger('usertype_id');
             $table->timestamps();
+
+            // Foreign key
+            $table->foreign('usertype_id')->references('id')->on('usertypes')->onDelete('cascade');
         });
     }
 
