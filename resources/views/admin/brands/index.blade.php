@@ -59,17 +59,21 @@
 @stop
 
 <!-- Modal -->
-<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered" role="document"> <!-- Centrar el modal -->
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalTitle">Formulario de Marcas</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
+<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow">
+            <!-- Header elegante -->
+            <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #035286, #034c7c);">
+                <h5 class="modal-title font-weight-bold">
+                    <i class="fas fa-car mr-2 text-warning"></i>Gestión de Vehículos
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true" class="h5 mb-0">&times;</span>
                 </button>
             </div>
-            <div class="modal-body" id="modalBody">
+
+            <!-- Body limpio -->
+            <div class="modal-body p-4" id="modalBody" style="max-height: 70vh; overflow-y: auto;">
                 <!-- El contenido se cargará aquí dinámicamente -->
             </div>
         </div>
