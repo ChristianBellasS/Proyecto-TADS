@@ -25,8 +25,17 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'last_name',
+        'dni',
+        'birthdate',
+        'license',
+        'address',
+        'telefono',
         'email',
         'password',
+        'estado',
+        'usertype_id',
+        'profile_photo_path',
     ];
 
     /**
@@ -48,6 +57,7 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'birthdate' => 'date',
     ];
 
     /**
@@ -58,4 +68,28 @@ class User extends Authenticatable
     protected $appends = [
         'profile_photo_url',
     ];
+
+    // Relación con UserType
+    public function userType()
+    {
+        return $this->belongsTo(UserType::class, 'usertype_id');
+    }
+
+    // Verificar si es mayor de 18 años
+    public function getIsAdultAttribute()
+    {
+        return $this->birthdate && $this->birthdate->age >= 18;
+    }
+
+    // Scope para usuarios activos
+    public function scopeActivo($query)
+    {
+        return $query->where('estado', 'activo');
+    }
+
+    // Scope para usuarios inactivos
+    public function scopeInactivo($query)
+    {
+        return $query->where('estado', 'inactivo');
+    }
 }
