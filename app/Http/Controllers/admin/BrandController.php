@@ -115,7 +115,7 @@ public function update(Request $request, string $id)
         // Validación de los campos
         $request->validate([
             'name' => 'required|unique:brands,name,' . $brand->id,
-            'description' => 'required',
+            'description' => 'nullable',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,svg,gif,webp'
         ]);
 
