@@ -11,7 +11,22 @@ class Vehicle extends Model
 
     protected $table = 'vehicles';
     
-    protected $guarded = [];
+    protected $fillable = [
+        'name',
+        'code',
+        'plate',
+        'year',
+        'load_capacity',
+        'fuel_capacity',
+        'compaction_capacity',
+        'people_capacity',
+        'description',
+        'status',
+        'brand_id',
+        'model_id',
+        'type_id',
+        'color_id'
+    ];
 
     // Relaciones
     public function brand()
@@ -75,5 +90,4 @@ class Vehicle extends Model
     {
         return $this->vehicleImages()->exists();
     }
-    
 }

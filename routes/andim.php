@@ -40,4 +40,4 @@ Route::delete('vehicles/delete-image/{id}', [VehicleController::class, 'destroyI
 Route::get('vehicles/images-by-vehicle/{vehicle_id}', [VehicleController::class, 'getImagesByVehicle'])->name('admin.vehicles.images-by-vehicle');
 
 #FUNCIONES - VEHICLES
-Route::get('/admin/vehicles/get-models/{brandId}', [VehicleController::class, 'getModelsByBrand'])->name('admin.vehicles.get-models');
+Route::get('vehicles/get-models/{brandId}', [VehicleController::class, 'getModelsByBrand'])->name('admin.vehicles.get-models');

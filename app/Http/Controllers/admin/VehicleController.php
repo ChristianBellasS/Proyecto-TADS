@@ -12,6 +12,7 @@ use App\Models\Color;
 use App\Models\VehicleImage;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class VehicleController extends Controller
 {
@@ -98,15 +99,16 @@ class VehicleController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+        public function create()
     {
         $brands = Brand::all();
-        $models = BrandModel::all();
+        $models = collect(); // Colección vacía
         $types = VehicleType::all();
         $colors = Color::all();
         
         return view('admin.vehicles.create', compact('brands', 'models', 'types', 'colors'));
     }
+
 
     /**
      * Store a newly created resource in storage.
@@ -121,6 +123,9 @@ class VehicleController extends Controller
                 'plate' => 'required|string|max:20|unique:vehicles',
                 'year' => 'required|integer|min:1900|max:' . (date('Y') + 1),
                 'load_capacity' => 'required|numeric|min:0',
+                'fuel_capacity' => 'required|numeric|min:0',
+                'compaction_capacity' => 'required|numeric|min:0',
+                'people_capacity' => 'required|integer|min:1',
                 'status' => 'required|in:0,1',
                 'brand_id' => 'required|exists:brands,id',
                 'model_id' => 'required|exists:brandmodels,id',
@@ -136,6 +141,9 @@ class VehicleController extends Controller
                 'plate' => strtoupper($request->plate),
                 'year' => $request->year,
                 'load_capacity' => $request->load_capacity,
+                'fuel_capacity' => $request->fuel_capacity,
+                'compaction_capacity' => $request->compaction_capacity,
+                'people_capacity' => $request->people_capacity,
                 'description' => $request->description,
                 'status' => $request->status,
                 'brand_id' => $request->brand_id,
@@ -153,11 +161,11 @@ class VehicleController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+     public function edit(string $id)
     {
         $vehicle = Vehicle::find($id);
         $brands = Brand::all();
-        $models = BrandModel::all();
+        $models = collect(); // Colección vacía
         $types = VehicleType::all();
         $colors = Color::all();
         
@@ -183,6 +191,9 @@ class VehicleController extends Controller
                 'plate' => 'required|string|max:20|unique:vehicles,plate,' . $vehicle->id,
                 'year' => 'required|integer|min:1900|max:' . (date('Y') + 1),
                 'load_capacity' => 'required|numeric|min:0',
+                'fuel_capacity' => 'required|numeric|min:0',
+                'compaction_capacity' => 'required|numeric|min:0',
+                'people_capacity' => 'required|integer|min:1',
                 'status' => 'required|in:0,1',
                 'brand_id' => 'required|exists:brands,id',
                 'model_id' => 'required|exists:brandmodels,id',
@@ -198,6 +209,9 @@ class VehicleController extends Controller
                 'plate' => strtoupper($request->plate),
                 'year' => $request->year,
                 'load_capacity' => $request->load_capacity,
+                'fuel_capacity' => $request->fuel_capacity,
+                'compaction_capacity' => $request->compaction_capacity,
+                'people_capacity' => $request->people_capacity,
                 'description' => $request->description,
                 'status' => $request->status,
                 'brand_id' => $request->brand_id,
@@ -265,81 +279,82 @@ class VehicleController extends Controller
     }
 
     public function storeImages(Request $request, $id)
-{
-    $request->validate([
-        'images' => 'sometimes|array',
-        'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
-        'profile_image_id' => 'nullable|exists:vehicleimages,id',
-        'images_to_delete' => 'nullable|string',
-    ]);
-
-    try {
-        $vehicle = Vehicle::findOrFail($id);
-
-        // 1. Eliminar imágenes marcadas para eliminación
-        if ($request->has('images_to_delete') && !empty($request->images_to_delete)) {
-            $imagesToDelete = explode(',', $request->images_to_delete);
-            
-            foreach ($imagesToDelete as $imageId) {
-                $image = VehicleImage::find($imageId);
-                if ($image && $image->vehicle_id == $vehicle->id) {
-                    // Eliminar archivo físico
-                    if ($image->image && Storage::disk('public')->exists($image->image)) {
-                        Storage::disk('public')->delete($image->image);
-                    }
-                    // Eliminar de la base de datos
-                    $image->delete();
-                }
-            }
-        }
-
-        // 2. Establecer imagen de perfil
-        if ($request->has('profile_image_id') && $request->profile_image_id) {
-            VehicleImage::where('vehicle_id', $vehicle->id)
-                        ->update(['profile' => 0]);
-            
-            $profileImage = VehicleImage::find($request->profile_image_id);
-            if ($profileImage && $profileImage->vehicle_id == $vehicle->id) {
-                $profileImage->profile = 1;
-                $profileImage->save();
-            }
-        }
-
-        // 3. Agregar nuevas imágenes
-        $newImagesCount = 0;
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $image) {
-                $path = $image->store('vehicle_images', 'public');
-                
-                // Verificar si es la primera imagen y no hay perfil establecido
-                $isProfile = ($newImagesCount === 0 && !$request->has('profile_image_id'));
-                
-                VehicleImage::create([
-                    'image' => $path,
-                    'profile' => $isProfile ? 1 : 0,
-                    'vehicle_id' => $vehicle->id,
-                ]);
-                
-                $newImagesCount++;
-            }
-        }
-
-        $message = 'Imágenes actualizadas correctamente';
-        if ($newImagesCount > 0) {
-            $message .= '. ' . $newImagesCount . ' nueva(s) imagen(es) agregada(s)';
-        }
-
-        return response()->json([
-            'message' => $message,
-            'images_count' => $vehicle->vehicleImages()->count()
+    {
+        $request->validate([
+            'images' => 'sometimes|array',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'profile_image_id' => 'nullable|exists:vehicleimages,id',
+            'images_to_delete' => 'nullable|string',
         ]);
 
-    } catch (\Exception $e) {
-        return response()->json([
-            'message' => 'Error al guardar las imágenes: ' . $e->getMessage()
-        ], 500);
+        try {
+            $vehicle = Vehicle::findOrFail($id);
+
+            // 1. Eliminar imágenes marcadas para eliminación
+            if ($request->has('images_to_delete') && !empty($request->images_to_delete)) {
+                $imagesToDelete = explode(',', $request->images_to_delete);
+                
+                foreach ($imagesToDelete as $imageId) {
+                    $image = VehicleImage::find($imageId);
+                    if ($image && $image->vehicle_id == $vehicle->id) {
+                        // Eliminar archivo físico
+                        if ($image->image && Storage::disk('public')->exists($image->image)) {
+                            Storage::disk('public')->delete($image->image);
+                        }
+                        // Eliminar de la base de datos
+                        $image->delete();
+                    }
+                }
+            }
+
+            // 2. Establecer imagen de perfil
+            if ($request->has('profile_image_id') && $request->profile_image_id) {
+                VehicleImage::where('vehicle_id', $vehicle->id)
+                            ->update(['profile' => 0]);
+                
+                $profileImage = VehicleImage::find($request->profile_image_id);
+                if ($profileImage && $profileImage->vehicle_id == $vehicle->id) {
+                    $profileImage->profile = 1;
+                    $profileImage->save();
+                }
+            }
+
+            // 3. Agregar nuevas imágenes
+            $newImagesCount = 0;
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $image) {
+                    $path = $image->store('vehicle_images', 'public');
+                    
+                    // Verificar si es la primera imagen y no hay perfil establecido
+                    $isProfile = ($newImagesCount === 0 && !$request->has('profile_image_id'));
+                    
+                    VehicleImage::create([
+                        'image' => $path,
+                        'profile' => $isProfile ? 1 : 0,
+                        'vehicle_id' => $vehicle->id,
+                    ]);
+                    
+                    $newImagesCount++;
+                }
+            }
+
+            $message = 'Imágenes actualizadas correctamente';
+            if ($newImagesCount > 0) {
+                $message .= '. ' . $newImagesCount . ' nueva(s) imagen(es) agregada(s)';
+            }
+
+            return response()->json([
+                'message' => $message,
+                'images_count' => $vehicle->vehicleImages()->count()
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al guardar las imágenes: ' . $e->getMessage()
+            ], 500);
+        }
     }
-}
+
     public function setAsProfile(Request $request, $id)
     {
         $image = VehicleImage::findOrFail($id);

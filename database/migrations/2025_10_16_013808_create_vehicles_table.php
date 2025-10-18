@@ -18,6 +18,9 @@ return new class extends Migration
             $table->string('plate', 20)->unique();
             $table->integer('year');
             $table->double('load_capacity');
+            $table->double('fuel_capacity')->nullable();
+            $table->double('compaction_capacity')->nullable();
+            $table->integer('people_capacity')->nullable();
             $table->text('description')->nullable();
             $table->integer('status')->default(1);
             $table->unsignedBigInteger('brand_id');

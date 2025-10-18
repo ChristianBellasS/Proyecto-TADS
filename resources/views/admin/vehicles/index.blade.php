@@ -35,19 +35,47 @@
     </div>
 @stop
 
-<!-- Modal Principal -->
+<!-- Modal Principal - Versión Minimalista -->
 <div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
     aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalTitle">Formulario de Vehículos</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
+    <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow">
+            <!-- Header elegante -->
+            <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #035286, #034c7c);">
+                <h5 class="modal-title font-weight-bold">
+                    <i class="fas fa-car mr-2 text-warning"></i>Gestión de Vehículos
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true" class="h5 mb-0">&times;</span>
                 </button>
             </div>
-            <div class="modal-body" id="modalBody">
+
+            <!-- Body limpio -->
+            <div class="modal-body p-4" id="modalBody" style="max-height: 80vh; overflow-y: auto;">
                 <!-- El contenido se cargará aquí dinámicamente -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Específico para Gestión de Imágenes -->
+<div class="modal fade" id="imagesModal" tabindex="-1" role="dialog" aria-labelledby="imagesModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow">
+            <!-- Header elegante -->
+            <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #035286, #034c7c);">
+                <h5 class="modal-title font-weight-bold">
+                    <i class="fas fa-images mr-2 text-warning"></i>Gestión de Imágenes
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true" class="h5 mb-0">&times;</span>
+                </button>
+            </div>
+
+            <!-- Body limpio -->
+            <div class="modal-body p-4" id="imagesModalBody" style="max-height: 80vh; overflow-y: auto;">
+                <!-- El contenido de imágenes se cargará aquí -->
             </div>
         </div>
     </div>
@@ -189,7 +217,7 @@
                         $('#modal .modal-body').html(response);
                         $('#modal .modal-title').html("Nuevo Vehículo");
                         $('#modal').modal('show');
-                        
+
                         // Manejar el envío del formulario de creación
                         $('#modal form').on('submit', function(e) {
                             e.preventDefault();
@@ -213,7 +241,7 @@
                         $('#modalBody').html(response);
                         $('#modalTitle').text('Editar Vehículo');
                         $('#modal').modal('show');
-                        
+
                         // Manejar el envío del formulario de edición
                         $('#modal form').on('submit', function(e) {
                             e.preventDefault();
@@ -222,7 +250,8 @@
                     },
                     error: function(xhr) {
                         console.log('Error:', xhr);
-                        Swal.fire('Error', 'No se pudo cargar el formulario de edición', 'error');
+                        Swal.fire('Error', 'No se pudo cargar el formulario de edición',
+                            'error');
                     }
                 });
             });
@@ -234,10 +263,10 @@
                     url: "{{ url('admin/vehicles') }}/" + id + "/manage-images",
                     type: 'GET',
                     success: function(response) {
-                        $('#modalBody').html(response);
+                        $('#imagesModalBody').html(response);
                         $('#modalTitle').text('Gestionar Imágenes del Vehículo');
-                        $('#modal').modal('show');
-                        
+                        $('#imagesModal').modal('show');
+
                         // Manejar el envío del formulario de imágenes
                         $('#modal form').on('submit', function(e) {
                             e.preventDefault();
@@ -255,6 +284,10 @@
                 var formData = new FormData(form[0]);
                 var url = form.attr('action');
                 var method = form.attr('method');
+
+                // Mostrar loading
+                form.find('button[type="submit"]').html('<i class="fas fa-spinner fa-spin"></i> Guardando...').prop(
+                    'disabled', true);
 
                 $.ajax({
                     url: url,
@@ -278,6 +311,11 @@
                         if (xhr.responseJSON && xhr.responseJSON.message) {
                             errorMessage = xhr.responseJSON.message;
                         }
+
+                        // Restaurar botón
+                        form.find('button[type="submit"]').html('<i class="fas fa-save"></i> Guardar')
+                            .prop('disabled', false);
+
                         Swal.fire({
                             title: "Error!",
                             text: errorMessage,
@@ -289,22 +327,26 @@
             }
 
             // Función para enviar formularios de imágenes
-            function submitImageForm(form) {
-                var formData = new FormData(form[0]);
-                var url = form.attr('action');
-                var method = form.attr('method');
+            // Función para enviar formularios de imágenes
+            $(document).on('submit', '#imagesForm', function(e) {
+                e.preventDefault();
 
-                // Mostrar loading
-                $('#btnSubmit').html('<i class="fas fa-spinner fa-spin"></i> Guardando...').prop('disabled', true);
+                var form = $(this);
+                var formData = new FormData(this);
+                var url = $(this).attr('action');
+
+                // Mostrar loading en el botón
+                form.find('button[type="submit"]').html(
+                    '<i class="fas fa-spinner fa-spin"></i> Guardando...').prop('disabled', true);
 
                 $.ajax({
                     url: url,
-                    type: method,
+                    type: 'POST',
                     data: formData,
                     processData: false,
                     contentType: false,
                     success: function(response) {
-                        $('#modal').modal('hide');
+                        $('#imagesModal').modal('hide');
                         refreshTable();
                         Swal.fire({
                             title: "¡Éxito!",
@@ -318,22 +360,22 @@
                         var errorMessage = 'Error al guardar las imágenes';
                         if (xhr.responseJSON && xhr.responseJSON.message) {
                             errorMessage = xhr.responseJSON.message;
-                        } else if (xhr.responseJSON && xhr.responseJSON.errors) {
-                            errorMessage = Object.values(xhr.responseJSON.errors).join('<br>');
                         }
-                        
+
                         // Restaurar botón
-                        $('#btnSubmit').html('<i class="fas fa-save"></i> Guardar Cambios').prop('disabled', false);
-                        
+                        form.find('button[type="submit"]').html(
+                            '<i class="fas fa-save mr-1"></i> Guardar').prop('disabled',
+                            false);
+
                         Swal.fire({
                             title: "Error!",
-                            html: errorMessage,
+                            text: errorMessage,
                             icon: "error",
                             showConfirmButton: true
                         });
                     }
                 });
-            }
+            });
 
             // Función para refrescar la tabla
             function refreshTable() {
@@ -390,7 +432,8 @@
                     },
                     error: function(xhr) {
                         console.error('Error al cargar imágenes:', xhr);
-                        Swal.fire('Error', 'No se pudieron cargar las imágenes del vehículo', 'error');
+                        Swal.fire('Error', 'No se pudieron cargar las imágenes del vehículo',
+                            'error');
                     }
                 });
             });
@@ -468,7 +511,8 @@
                     },
                     error: function(xhr) {
                         console.error('Error:', xhr);
-                        Swal.fire('Error', 'No se pudo establecer la imagen como perfil', 'error');
+                        Swal.fire('Error', 'No se pudo establecer la imagen como perfil',
+                            'error');
                     }
                 });
             });
@@ -502,7 +546,9 @@
                                 Swal.fire('Eliminado!', response.message, 'success');
 
                                 // Encontrar el índice de la imagen eliminada
-                                const activeIndex = $('#vehicleCarousel .carousel-item.active').index();
+                                const activeIndex = $(
+                                        '#vehicleCarousel .carousel-item.active')
+                                    .index();
 
                                 // Eliminar la imagen del array local
                                 currentImages.splice(activeIndex, 1);
@@ -512,11 +558,13 @@
                                     $('#imageModal').modal('hide');
                                 } else {
                                     // Reconstruir el carrusel sin la imagen eliminada
-                                    const carouselInner = $('#vehicleCarousel .carousel-inner');
+                                    const carouselInner = $(
+                                        '#vehicleCarousel .carousel-inner');
                                     carouselInner.empty();
 
                                     currentImages.forEach((img, index) => {
-                                        const activeClass = index === 0 ? 'active' : '';
+                                        const activeClass = index === 0 ?
+                                            'active' : '';
                                         const crownIcon = img.is_profile ?
                                             '<div class="position-absolute" style="top: 15px; right: 15px;"><i class="fas fa-crown text-warning" style="font-size: 30px;"></i></div>' :
                                             '';
@@ -540,7 +588,8 @@
                             },
                             error: function(xhr) {
                                 console.error('Error:', xhr);
-                                Swal.fire('Error', 'No se pudo eliminar la imagen', 'error');
+                                Swal.fire('Error', 'No se pudo eliminar la imagen',
+                                    'error');
                             }
                         });
                     }
