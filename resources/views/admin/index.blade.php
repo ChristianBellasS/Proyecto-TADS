@@ -18,3 +18,12 @@
 @section('js')
     <script> console.log("Hi, I'm using the Laravel-AdminLTE package!"); </script>
 @stop
+
+<style>
+.nav-sidebar .nav-treeview {
+    margin-left: 20px;
+}
+.nav-sidebar .nav-treeview > .nav-item {
+    margin-left: 10px;
+}
+</style>
