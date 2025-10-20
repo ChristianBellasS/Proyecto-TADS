@@ -12,6 +12,7 @@ use App\Http\Controllers\admin\DistrictController;
 use App\Http\Controllers\admin\VehicleImageController;
 use App\Http\Controllers\admin\UserTypeController;
 use App\Http\Controllers\admin\UserController;
+use App\Http\Controllers\admin\UbigeoController;
 
 Route::get('/',[AdminController::class,'index'])->name('admin.index');
 Route::resource('brands', BrandController::class)->names('admin.brands');
@@ -24,15 +25,19 @@ Route::resource('users', UserController::class)->names('admin.users');
 
 // Gestión de Zonas
 Route::resource('zones', ZoneController::class)->names('admin.zones');
-Route::get('zones/{district}/by-district', [ZoneController::class, 'getZonesByDistrict'])->name('zones.by-district');
-    
-// API para ubicaciones
-// Route::get('admin/get-provinces/{department}', [ZoneController::class, 'getProvinces'])->name('admin.get.provinces');
-// Route::get('admin/get-districts/{province}', [ZoneController::class, 'getDistricts'])->name('admin.get.districts');
-    // API para ubicaciones
-Route::get('admin/get-provinces/{department}', [DistrictController::class, 'getProvincesByDepartment'])->name('admin.get.provinces');
-Route::get('admin/get-districts/{province}', [DistrictController::class, 'getDistrictsByProvince'])->name('admin.get.districts');
 
+// Rutas adicionales de Zonas
+Route::get('zones/by-district/{districtId}', [ZoneController::class, 'getZonesByDistrict'])
+    ->name('admin.zones.byDistrict');
+
+Route::get('admin/get-departments', [UbigeoController::class, 'getDepartments'])
+    ->name('admin.get.departments');
+
+Route::get('admin/get-provinces/{department}', [UbigeoController::class, 'getProvincesByDepartment'])
+    ->name('admin.get.provinces');
+
+Route::get('admin/get-districts/{province}', [UbigeoController::class, 'getDistrictsByProvince'])
+    ->name('admin.get.districts');
 
 Route::resource('vehicleimages', VehicleImageController::class)->names('admin.vehicleimages');
 
