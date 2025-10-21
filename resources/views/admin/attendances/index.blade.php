@@ -352,9 +352,10 @@
             });
 
             // Eliminar asistencia con confirmación de SweetAlert
-            $(document).on('click', '.frmDelete', function(event) {
-                var form = $(this);
+            $(document).on('click', '.frmDelete button[type="submit"]', function(event) {
                 event.preventDefault();
+
+                var form = $(this).closest('form');
 
                 Swal.fire({
                     title: '¿Estás seguro?',
@@ -377,26 +378,18 @@
                             success: function(response) {
                                 if (response.success) {
                                     refreshTable();
-                                    Swal.fire(
-                                        '¡Eliminado!',
-                                        response.message,
-                                        'success'
-                                    );
+                                    Swal.fire('¡Eliminado!', response.message,
+                                        'success');
                                 } else {
-                                    Swal.fire(
-                                        'Error',
-                                        response.message || 'Error al eliminar',
-                                        'error'
-                                    );
+                                    Swal.fire('Error', response.message ||
+                                        'Error al eliminar', 'error');
                                 }
                             },
                             error: function(xhr) {
                                 console.error('Error en eliminación:', xhr);
-                                Swal.fire(
-                                    'Error',
+                                Swal.fire('Error',
                                     'Hubo un problema al eliminar el registro.',
-                                    'error'
-                                );
+                                    'error');
                             }
                         });
                     }
