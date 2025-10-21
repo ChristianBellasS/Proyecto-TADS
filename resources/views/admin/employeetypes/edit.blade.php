@@ -1,12 +1,12 @@
-{!! Form::model($usertype, ['route' => ['admin.usertypes.update', $usertype->id], 'method' => 'PUT', 'id' => 'usertypeForm']) !!}
-    @include('admin.usertypes.templates.form')
+{!! Form::model($employeetype, ['route' => ['admin.employeetypes.update', $employeetype->id], 'method' => 'PUT', 'id' => 'employeetypeForm']) !!}
+    @include('admin.employeetypes.templates.form')
     <button type="submit" class="btn btn-success"> <i class="fas fa-save"></i> Guardar</button>
     <button type="button" class="btn btn-danger" data-dismiss="modal"> <i class="fas fa-window-close"></i> Cancelar</button>
 {!! Form::close() !!}
 
 <script>
     $(document).ready(function() {
-        $('#usertypeForm').on('submit', function(e) {
+        $('#employeetypeForm').on('submit', function(e) {
             e.preventDefault();
             var form = $(this);
             var formData = new FormData(this);

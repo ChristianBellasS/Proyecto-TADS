@@ -12,6 +12,8 @@ use App\Http\Controllers\admin\DistrictController;
 use App\Http\Controllers\admin\VehicleImageController;
 use App\Http\Controllers\admin\UserTypeController;
 use App\Http\Controllers\admin\UserController;
+use App\Http\Controllers\admin\EmployeeTypeController;
+use App\Http\Controllers\admin\EmployeeController;
 
 Route::get('/',[AdminController::class,'index'])->name('admin.index');
 Route::resource('brands', BrandController::class)->names('admin.brands');
@@ -21,6 +23,8 @@ Route::resource('colors', ColorController::class)->names('admin.colors');
 Route::resource('vehicles', VehicleController::class)->names('admin.vehicles');
 Route::resource('usertypes', UserTypeController::class)->names('admin.usertypes');
 Route::resource('users', UserController::class)->names('admin.users');
+Route::resource('employeetypes', EmployeeTypeController::class)->names('admin.employeetypes');
+Route::resource('employees', EmployeeController::class)->names('admin.employees');
 
 // Gestión de Zonas
 Route::resource('zones', ZoneController::class)->names('admin.zones');

@@ -339,17 +339,17 @@ return [
             'submenu' => [
                 [
                     'text' => 'Tipos de Personal',
-                    'url' => 'admin/usertypes',
+                    'url' => 'admin/employeetypes',
                     'icon' => 'fas fa-user-friends',
                     'icon_color' => 'green',
-                    'active' => ['admin/usertypes*'],
+                    'active' => ['admin/employeetypes*'],
                 ],
                 [
                     'text' => 'Lista de Personal',
-                    'url' => 'admin/users',
+                    'url' => 'admin/employees',
                     'icon' => 'fas fa-user',
                     'icon_color' => 'green',
-                    'active' => ['admin/users*'],
+                    'active' => ['admin/employees*'],
                 ],
             ],
         ],

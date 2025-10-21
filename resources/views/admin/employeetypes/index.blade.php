@@ -1,12 +1,12 @@
 @extends('adminlte::page')
 
-@section('title', 'Empleados')
+@section('title', 'Tipos de Empleado')
 
 @section('content_header')
     <button type="button" class="btn btn-success float-right" id="btnRegistrar">
-        <i class="fa fa-plus"></i> Nuevo Empleado
+        <i class="fa fa-plus"></i> Nuevo Tipo
     </button>
-    <h1>Lista de Empleados</h1>
+    <h1>Lista de Tipos de Empleado</h1>
 @stop
 
 @section('content')
@@ -16,14 +16,11 @@
                 <table class="table table-bordered table-striped" id="table">
                     <thead>
                         <tr>
-                            <th>Foto</th>
-                            <th>DNI</th>
-                            <th>Nombres</th>
-                            <th>Apellidos</th>
-                            <th>Email</th>
-                            <th>Tipo</th>
-                            <th>Estado</th>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Descripción</th>
                             <th>Fecha Creación</th>
+                            <th>Fecha Actualización</th>
                             <th width="10px"></th>
                             <th width="10px"></th>
                         </tr>
@@ -40,17 +37,20 @@
 <!-- Modal -->
 <div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
     aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content border-0 shadow">
+            <!-- Header elegante -->
             <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #035286, #034c7c);">
                 <h5 class="modal-title font-weight-bold">
-                    <i class="fas fa-user mr-2 text-warning" id="modalTitle"></i>Formulario de Empleados
+                    <i class="fas fa-users mr-2 text-warning" id="modalTitle"></i>Formulario de Tipos de Empleado
                 </h5>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true" class="h5 mb-0">&times;</span>
                 </button>
             </div>
-            <div class="modal-body p-4" id="modalBody" style="max-height: 80vh; overflow-y: auto;">
+
+            <!-- Body limpio -->
+            <div class="modal-body p-4" id="modalBody" style="max-height: 70vh; overflow-y: auto;">
                 <!-- El contenido se cargará aquí dinámicamente -->
             </div>
         </div>
@@ -60,37 +60,24 @@
 @section('js')
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
     <script>
-        var table;
-
         $(document).ready(function() {
             // Inicialización de DataTable
-            table = $('#table').DataTable({
-                "ajax": "{{ route('admin.users.index') }}",
+            var table = $('#table').DataTable({
+                "ajax": "{{ route('admin.employeetypes.index') }}",
                 "columns": [{
-                        "data": "profile_photo",
-                        "orderable": false,
-                        "searchable": false
-                    },
-                    {
-                        "data": "dni"
+                        "data": "id"
                     },
                     {
                         "data": "name"
                     },
                     {
-                        "data": "last_name"
-                    },
-                    {
-                        "data": "email"
-                    },
-                    {
-                        "data": "user_type"
-                    },
-                    {
-                        "data": "estado"
+                        "data": "description"
                     },
                     {
                         "data": "created_at"
+                    },
+                    {
+                        "data": "updated_at"
                     },
                     {
                         "data": "edit",
@@ -111,7 +98,7 @@
                 ]
             });
 
-            // Eliminar empleado con confirmación de SweetAlert
+            // Eliminar tipo de empleado con confirmación de SweetAlert
             $(document).on('click', '.frmDelete', function(event) {
                 var form = $(this);
                 event.preventDefault();
@@ -134,7 +121,7 @@
                                 Swal.fire(
                                     '¡Eliminado!',
                                     response.message ||
-                                    'El empleado ha sido eliminado.',
+                                    'El tipo de empleado ha sido eliminado.',
                                     'success'
                                 );
                             },
@@ -143,7 +130,7 @@
                                 Swal.fire(
                                     'Error',
                                     error.message ||
-                                    'Hubo un problema al eliminar el empleado.',
+                                    'Hubo un problema al eliminar el tipo de empleado.',
                                     'error'
                                 );
                             }
@@ -152,15 +139,47 @@
                 });
             });
 
-            // Abrir modal para crear un nuevo empleado
+            // Abrir modal para crear un nuevo tipo de empleado
             $('#btnRegistrar').click(function() {
                 $.ajax({
-                    url: "{{ route('admin.users.create') }}",
+                    url: "{{ route('admin.employeetypes.create') }}",
                     type: "GET",
                     success: function(response) {
                         $('#modal .modal-body').html(response);
-                        $('#modal .modal-title').html("Nuevo Empleado");
+                        $('#modal .modal-title').html("Nuevo tipo de empleado");
                         $('#modal').modal('show');
+
+                        // Manejar el envío del formulario dentro del modal
+                        $('#modal form').on('submit', function(e) {
+                            e.preventDefault();
+                            var form = $(this);
+                            var formData = new FormData(this);
+
+                            $.ajax({
+                                url: form.attr('action'),
+                                type: form.attr('method'),
+                                data: formData,
+                                processData: false,
+                                contentType: false,
+                                success: function(response) {
+                                    $('#modal').modal('hide');
+                                    table.ajax.reload();
+                                    Swal.fire({
+                                        title: "¡Éxito!",
+                                        text: response.message,
+                                        icon: "success"
+                                    });
+                                },
+                                error: function(xhr) {
+                                    var error = xhr.responseJSON;
+                                    Swal.fire({
+                                        title: "Error!",
+                                        text: error.message,
+                                        icon: "error"
+                                    });
+                                }
+                            });
+                        });
                     },
                     error: function(xhr, status, error) {
                         console.log(xhr, status, error);
@@ -168,17 +187,49 @@
                 });
             });
 
-            // Abrir modal para editar un empleado existente
+            // Abrir modal para editar un tipo de empleado existente
             $(document).on('click', '.btnEditar', function() {
                 var id = $(this).data('id');
                 $.ajax({
-                    url: "{{ url('admin/users') }}/" + id + "/edit",
+                    url: "{{ url('admin/employeetypes') }}/" + id + "/edit",
                     type: 'GET',
                     dataType: 'html',
                     success: function(response) {
                         $('#modalBody').html(response);
-                        $('#modal .modal-title').html("Editar Empleado");
+                        $('#modal .modal-title').html("Editar tipo de empleado");
                         $('#modal').modal('show');
+
+                        // Manejar el envío del formulario dentro del modal
+                        $('#modal form').on('submit', function(e) {
+                            e.preventDefault();
+                            var form = $(this);
+                            var formData = new FormData(this);
+
+                            $.ajax({
+                                url: form.attr('action'),
+                                type: form.attr('method'),
+                                data: formData,
+                                processData: false,
+                                contentType: false,
+                                success: function(response) {
+                                    $('#modal').modal('hide');
+                                    table.ajax.reload();
+                                    Swal.fire({
+                                        title: "¡Éxito!",
+                                        text: response.message,
+                                        icon: "success"
+                                    });
+                                },
+                                error: function(xhr) {
+                                    var error = xhr.responseJSON;
+                                    Swal.fire({
+                                        title: "Error!",
+                                        text: error.message,
+                                        icon: "error"
+                                    });
+                                }
+                            });
+                        });
                     },
                     error: function(xhr) {
                         console.log('Error:', xhr);

@@ -15,16 +15,16 @@
             </div>
             <div class="col-md-6">
                 <div class="form-group">
-                    {!! Form::label('usertype_id', 'Tipo de Empleado *') !!}
-                    @if (isset($usertypes) && $usertypes->count() > 0)
-                        {!! Form::select('usertype_id', $usertypes->pluck('name', 'id'), null, [
+                    {!! Form::label('employeetype_id', 'Tipo de Empleado *') !!}
+                    @if (isset($employeetypes) && $employeetypes->count() > 0)
+                        {!! Form::select('employeetype_id', $employeetypes->pluck('name', 'id'), null, [
                             'class' => 'form-control',
                             'placeholder' => 'Seleccione un tipo',
                             'required',
                         ]) !!}
                     @else
-                        <select class="form-control" name="usertype_id" required>
-                            <option value="">No hay tipos de usuario disponibles</option>
+                        <select class="form-control" name="employeetype_id" required>
+                            <option value="">No hay tipos de empleado disponibles</option>
                         </select>
                     @endif
                 </div>
@@ -54,7 +54,7 @@
             <div class="col-md-6">
                 <div class="form-group">
                     {!! Form::label('birthdate', 'Fecha de Nacimiento *') !!}
-                    {!! Form::date('birthdate', isset($user) && $user->birthdate ? $user->birthdate->format('Y-m-d') : null, [
+                    {!! Form::date('birthdate', isset($employee) && $employee->birthdate ? $employee->birthdate->format('Y-m-d') : null, [
                         'class' => 'form-control',
                         'required',
                         'max' => date('Y-m-d', strtotime('-18 years')),
@@ -91,18 +91,18 @@
                     {!! Form::select(
                         'estado',
                         ['activo' => 'Activo', 'inactivo' => 'Inactivo'],
-                        isset($user) ? $user->estado : 'activo',
+                        isset($employee) ? $employee->estado : 'activo',
                         ['class' => 'form-control', 'required'],
                     ) !!}
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="form-group">
-                    {!! Form::label('password', 'Contraseña ' . (isset($user) ? '(dejar en blanco para no cambiar)' : '*')) !!}
+                    {!! Form::label('password', 'Contraseña ' . (isset($employee) ? '(dejar en blanco para no cambiar)' : '*')) !!}
                     {!! Form::password('password', [
                         'class' => 'form-control',
                         'placeholder' => 'Mínimo 6 caracteres',
-                        isset($user) ? '' : 'required',
+                        isset($employee) ? '' : 'required',
                     ]) !!}
                     <small class="form-text text-muted">Mínimo 6 caracteres</small>
                 </div>
@@ -126,7 +126,7 @@
             <label>Foto de Perfil</label>
             <div id="imageButton" style="width: 100%; text-align:center; padding:10px;">
                 <img id="imagePreview"
-                    src="{{ isset($user) && $user->profile_photo_path ? asset('storage/' . $user->profile_photo_path) : asset('storage/profile_photos/no_logo.png') }}"
+                    src="{{ isset($employee) && $employee->profile_photo_path ? asset('storage/' . $employee->profile_photo_path) : asset('storage/profile_photos/no_logo.png') }}"
                     alt="Vista previa de la imagen"
                     style="width: 100%; height: 400px; object-fit: cover; cursor: pointer; border-radius: 8px;">
                 <p style="font-size:12px; margin-top: 10px;">Haga click para seleccionar una imagen</p>
@@ -161,7 +161,7 @@
         });
 
         // Validación de formulario
-        $('#userForm').off('submit').on('submit', function(e) {
+        $('#employeeForm').off('submit').on('submit', function(e) {
             e.preventDefault();
             var form = $(this);
             var formData = new FormData(this);
