@@ -358,6 +358,7 @@ return [
                     'icon_color' => 'green',
                     'active' => ['admin/attendances*'],
                 ],
+                
             ],
         ],
         [
@@ -422,6 +423,21 @@ return [
                     'icon' => 'far fa-map',
                     'icon_color' => 'yellow',
                     'active' => ['admin/zones*'],
+                ],
+            ],
+        ],
+        [
+            'text' => 'Gestión de Vacaciones',
+            'icon' => 'fas fa-plane-departure',
+            'icon_color' => 'cyan',
+            'submenu_class' => 'custom-submenu',
+            'submenu' => [
+                [
+                    'text' => 'Vacaciones',
+                    'url' => 'admin/vacations',
+                    'icon' => 'fas fa-suitcase-rolling',
+                    'icon_color' => 'cyan',
+                    'active' => ['admin/vacations*'],
                 ],
             ],
         ],

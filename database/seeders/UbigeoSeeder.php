@@ -6,6 +6,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use GuzzleHttp\Client;
 
+
 class UbigeoSeeder extends Seeder
 {
     public function run(): void

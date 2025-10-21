@@ -113,23 +113,24 @@
 
 
 
-<!-- ============================================================
- DEPENDENCIAS LEAFLET
-============================================================= -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
-<!-- ============================================================
- SCRIPT DEL MAPA Y COORDENADAS
-============================================================= -->
+
 <script>
-    let map = null;
-    let drawnItems = null;
-    let currentPolygon = null;
-    let drawControl = null;
+
+    // let map = null;
+    // let drawnItems = null;
+    // let currentPolygon = null;
+    // let drawControl = null;
+    window.map = null;
+    window.drawnItems = null;
+    window.currentPolygon = null;
+    window.drawControl = null;
+    window.originalPolygonCoords = null;
+    window.existingZones = null;
+    window.currentZoneId = null;
+
+
 
     function initializeMap() {
         // 🔹 Si el mapa no existe, inicialízalo
@@ -176,6 +177,7 @@
             map.addControl(drawControl);
 
             // Cuando se dibuja un nuevo polígono
+            /*
             map.on(L.Draw.Event.CREATED, function(e) {
                 drawnItems.clearLayers();
                 const layer = e.layer;
@@ -184,8 +186,157 @@
                 drawnItems.addLayer(layer);
                 updateInputsFromPolygon(layer.getLatLngs()[0]);
             });
+            */
+           /*
+           map.on(L.Draw.Event.CREATED, function(e) {
+            
+                const layer = e.layer;
+                const newPolygon = layer.toGeoJSON();
+
+                // 🧩 Verificar superposición con zonas existentes usando turf.js
+                let intersects = false;
+
+                if (existingZones && existingZones.length > 0) {
+                    existingZones.forEach(zone => {
+                        if (zone.coords && zone.coords.length >= 3) {
+                            // turf espera [ [lng, lat], ... ] dentro de un array exterior
+                            const existingCoordsLonLat = zone.coords.map(coord => [coord[1], coord[0]]);
+                            const existingPolygon = turf.polygon([existingCoordsLonLat]);
+                            const newPolyTurf = turf.polygon([newPolygon.geometry.coordinates[0]]); // ya en [lng, lat]
+
+                            try {
+                                if (turf.booleanIntersects(existingPolygon, newPolyTurf) || turf.booleanOverlap(existingPolygon, newPolyTurf)) {
+                                    intersects = true;
+                                }
+                            } catch (err) {
+                                console.error('Error turf booleanIntersects:', err);
+                            }
+                        }
+                    });
+                }
+
+                if (intersects) {
+                    Swal.fire('Error', 'La nueva zona se superpone con una ya existente. Por favor, dibuja en otra área.', 'error');
+                    return; // No agregar el polígono
+                }
+
+                // Si llegó hasta aquí, no hay intersección → continuar
+                drawnItems.clearLayers();
+                currentPolygon = layer;
+                drawnItems.addLayer(layer);
+                updateInputsFromPolygon(layer.getLatLngs()[0]);
+                
+               // 🔹 Código corregido sin validación de intersección
+               /*
+               // Convertir a formato [lng, lat]
+                let existingCoordsLonLat = zone.coords.map(coord => [coord[1], coord[0]]);
+
+                // 🔹 Cerrar el polígono si no está cerrado
+                if (
+                    existingCoordsLonLat.length > 0 &&
+                    (existingCoordsLonLat[0][0] !== existingCoordsLonLat.at(-1)[0] ||
+                    existingCoordsLonLat[0][1] !== existingCoordsLonLat.at(-1)[1])
+                ) {
+                    existingCoordsLonLat.push(existingCoordsLonLat[0]);
+                }
+
+                let newCoords = newPolygon.geometry.coordinates[0];
+                // 🔹 Cerrar también el nuevo polígono dibujado
+                if (
+                    newCoords.length > 0 &&
+                    (newCoords[0][0] !== newCoords.at(-1)[0] ||
+                    newCoords[0][1] !== newCoords.at(-1)[1])
+                ) {
+                    newCoords.push(newCoords[0]);
+                }
+
+                // Crear polígonos Turf válidos
+                const existingPolygon = turf.polygon([existingCoordsLonLat]);
+                const newPoly
+                */
+                ///
+
+            //});
+            map.on(L.Draw.Event.CREATED, function(e) {
+                const layer = e.layer;
+                const newPolygon = layer.toGeoJSON();
+
+                // 🧩 Verificar superposición con zonas existentes usando turf.js
+                let intersects = false;
+
+                if (existingZones && existingZones.length > 0) {
+                    existingZones.forEach(zone => {
+                                    // 🔸 Omitir la zona actual en edición
+                        if (currentZoneId && zone.id === currentZoneId) return;
+
+                        if (zone.coords && zone.coords.length >= 3) {
+                            // 🔹 Convertir a [lng, lat]
+                            const existingCoordsLonLat = zone.coords.map(coord => [coord[1], coord[0]]);
+
+                            // 🔹 Cerrar el polígono si no está cerrado
+                            if (
+                                existingCoordsLonLat.length > 0 &&
+                                (
+                                    existingCoordsLonLat[0][0] !== existingCoordsLonLat.at(-1)[0] ||
+                                    existingCoordsLonLat[0][1] !== existingCoordsLonLat.at(-1)[1]
+                                )
+                            ) {
+                                existingCoordsLonLat.push(existingCoordsLonLat[0]);
+                            }
+
+                            // 🔹 También cerrar el nuevo polígono dibujado
+                            const newCoords = newPolygon.geometry.coordinates[0];
+                            if (
+                                newCoords.length > 0 &&
+                                (
+                                    newCoords[0][0] !== newCoords.at(-1)[0] ||
+                                    newCoords[0][1] !== newCoords.at(-1)[1]
+                                )
+                            ) {
+                                newCoords.push(newCoords[0]);
+                            }
+
+                            // // 🔹 Crear polígonos Turf válidos
+                            // const existingPolygon = turf.polygon([existingCoordsLonLat]);
+                            // const newPolyTurf = turf.polygon([newCoords]);
+
+                            try {
+
+                            // 🔹 Crear polígonos Turf válidos
+                            const existingPolygon = turf.polygon([existingCoordsLonLat]);
+                            const newPolyTurf = turf.polygon([newCoords]);
+
+                                if (
+                                    turf.booleanIntersects(existingPolygon, newPolyTurf) ||
+                                    turf.booleanOverlap(existingPolygon, newPolyTurf)
+                                ) {
+                                    intersects = true;
+                                }
+                            } catch (err) {
+                                console.error('Error turf booleanIntersects:', err);
+                            }
+                        }
+                    });
+                }
+
+                if (intersects) {
+                    Swal.fire(
+                        'Error',
+                        'La nueva zona se superpone con una ya existente. Por favor, dibuja en otra área.',
+                        'error'
+                    );
+                    return;
+                }
+
+                // Si no hay intersección, agregar al mapa
+                drawnItems.clearLayers();
+                currentPolygon = layer;
+                drawnItems.addLayer(layer);
+                updateInputsFromPolygon(layer.getLatLngs()[0]);
+            });
 
             // Cuando se edita un polígono
+            /*
             map.on(L.Draw.Event.EDITED, function(e) {
                 e.layers.eachLayer(function(layer) {
                     currentPolygon = layer;
@@ -193,6 +344,132 @@
                     updateInputsFromPolygon(coords);
                 });
             });
+            */
+           // 🧩 Cuando se edita un polígono existente
+            map.on(L.Draw.Event.EDITED, function(e) {
+                e.layers.eachLayer(function(layer) {
+                    currentPolygon = layer;
+                    const editedPolygon = layer.toGeoJSON();
+
+                    let intersects = false;
+
+                    // 🔹 Validar contra todas las zonas existentes (excepto la actual)
+                    if (existingZones && existingZones.length > 0) {
+                        existingZones.forEach(zone => {
+                            if (currentZoneId && zone.id === currentZoneId) return; // evitar comparar consigo misma
+
+                            if (zone.coords && zone.coords.length >= 3) {
+                                const existingCoords = zone.coords.map(c => [c[1], c[0]]);
+
+                                // cerrar anillo si hace falta
+                                if (
+                                    existingCoords[0][0] !== existingCoords.at(-1)[0] ||
+                                    existingCoords[0][1] !== existingCoords.at(-1)[1]
+                                ) {
+                                    existingCoords.push(existingCoords[0]);
+                                }
+
+                                const editedCoords = editedPolygon.geometry.coordinates[0];
+                                if (
+                                    editedCoords[0][0] !== editedCoords.at(-1)[0] ||
+                                    editedCoords[0][1] !== editedCoords.at(-1)[1]
+                                ) {
+                                    editedCoords.push(editedCoords[0]);
+                                }
+
+                                try {
+                                    const existingPoly = turf.polygon([existingCoords]);
+                                    const editedPoly = turf.polygon([editedCoords]);
+
+                                    if (
+                                        turf.booleanIntersects(existingPoly, editedPoly) ||
+                                        turf.booleanOverlap(existingPoly, editedPoly)
+                                    ) {
+                                        intersects = true;
+                                    }
+                                } catch (err) {
+                                    console.error('Error comprobando intersección al editar:', err);
+                                }
+                            }
+                        });
+                    }
+
+                    if (intersects) {
+                        Swal.fire(
+                            'Error',
+                            'La nueva forma del polígono se superpone con otra zona existente. Corrige la posición antes de guardar.',
+                            'error'
+                        );
+
+                        // 🔹 Revertir cambios (volver al polígono previo)
+                        /*
+                        if (typeof redrawPolygon === 'function' && window.originalPolygonCoords) {
+                            redrawPolygon(window.originalPolygonCoords);
+                        }                       
+                        */
+                       /*
+                       if (window.originalPolygonCoords) {
+                            // Quitar el polígono editado
+                            drawnItems.removeLayer(layer);
+
+                            // Crear uno nuevo con las coordenadas originales
+                            const restoredLayer = L.polygon(window.originalPolygonCoords, { color: 'blue', weight: 2, fillColor: '#3388ff', fillOpacity: 0.2 });
+                            // restoredLayer._path.classList.add('polygon-restored');
+                            drawnItems.addLayer(restoredLayer);
+
+                            console.log('Restaurando polígono a coordenadas originales:', window.originalPolygonCoords);
+
+
+
+                            // Actualizar referencias
+                            currentPolygon = restoredLayer;
+                            updateInputsFromPolygon(restoredLayer.getLatLngs()[0]);
+                            // ✅ Actualizar backup con el estado original restaurado
+                            window.originalPolygonCoords = restoredLayer.getLatLngs()[0].map(c => [c.lat, c.lng]);
+
+
+
+                            console.log('Backup de coordenadas restaurado:', window.originalPolygonCoords);
+
+                            Swal.fire(
+                                'Error',
+                                'La nueva forma se superpone con otra zona. Se restauró la forma original.',
+                                'error'
+                            );
+                            console.log('Polígono editado que causó intersección revertido a estado original.');
+                        }
+                            */
+                        if (window.originalPolygonCoords) {
+                            // 🔁 Reutiliza la función para restaurar el polígono original
+                            redrawPolygon(window.originalPolygonCoords);
+
+                            // 🔹 Actualizar inputs y respaldo
+                            if (currentPolygon) {
+                                updateInputsFromPolygon(currentPolygon.getLatLngs()[0]);
+                                window.originalPolygonCoords = currentPolygon.getLatLngs()[0].map(c => [c.lat, c.lng]);
+                            }
+
+                            Swal.fire(
+                                'Error',
+                                'La nueva forma se superpone con otra zona. Se restauró la forma original.',
+                                'error'
+                            );
+
+                            console.log('Polígono editado revertido mediante redrawPolygon():', window.originalPolygonCoords);
+                        }
+
+
+
+                        return;
+                    }
+
+                    // ✅ Si no hay intersección, guardar cambios y actualizar coordenadas
+                    const coords = layer.getLatLngs()[0];
+                    updateInputsFromPolygon(coords);
+                    window.originalPolygonCoords = coords.map(c => [c.lat, c.lng]); // guardar backup
+                });
+            });
+
 
             // 🔹 DIBUJAR POLÍGONO EXISTENTE SI HAY COORDENADAS (PARA EDICIÓN)
             @if (isset($zone) && $zone->coordinates->count() > 0)
@@ -211,6 +488,8 @@
                         // Ajustar vista del mapa al polígono
                         if (map && currentPolygon) {
                             map.fitBounds(currentPolygon.getBounds());
+                            window.originalPolygonCoords = currentPolygon.getLatLngs()[0].map(c => [c.lat, c.lng]);
+
                         }
                     }
                 }, 500);
@@ -236,12 +515,48 @@
             });
             map.addControl(drawControl);
         }
+
+
+        // 🔹 DIBUJAR ZONAS EXISTENTES EN EL MAP
+        // Mostrar zonas existentes (solo lectura)
+        if (existingZones && existingZones.length > 0) {
+            existingZones.forEach(zone => {
+                if (zone.coords && zone.coords.length >= 3) {
+                    const polygon = L.polygon(zone.coords, {
+                        color: '#FF0000',
+                        fillColor: '#FF6666',
+                        fillOpacity: 0.25,
+                        weight: 2,
+                        interactive: false
+                    }).addTo(map);
+
+                    polygon.bindPopup(`<strong>${zone.name}</strong>`);
+                }
+            });
+        }
+
+        //  Finalmente, dibuja las zonas existentes
     }
 
     // 🔹 INICIALIZAR MAPA CUANDO EL MODAL SE MUESTRA
+    /*
     $('#modal').on('shown.bs.modal', function() {
         setTimeout(initializeMap, 300);
     });
+    */
+   // Cuando el modal se muestra
+    $('#modal').on('shown.bs.modal', function() {
+        setTimeout(() => {
+            initializeMap();
+            if (map) map.invalidateSize();
+        }, 400);
+    });
+
+    // Dentro de initializeMap(), al final:
+    setTimeout(() => {
+        if (map) map.invalidateSize();
+    }, 800);
+
 
     // 🔹 LIMPIAR MAPA CUANDO EL MODAL SE CIERRA
     $('#modal').on('hidden.bs.modal', function() {
@@ -329,6 +644,9 @@
             console.log('Coordenadas insuficientes:', coords.length);
         }
     }
+
+
+
 </script>
 
 <script>
@@ -438,7 +756,7 @@
                 return;
             }
 
-            /*
+            
 
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(async () => {
@@ -469,7 +787,8 @@
                     $('#addressSuggestions').hide();
                 }
             }, 400); // Espera 400 ms entre tecleos
-            */
+            
+           /*
            clearTimeout(searchTimeout);
             searchTimeout = setTimeout(async () => {
                 const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query + ', ' + district + ', ' + province + ', ' + department + ', Peru')}&limit=5`;
@@ -505,7 +824,7 @@
                     $('#addressSuggestions').hide();
                 }
             }, 400);
-
+              */
         });
 
         // 🔸 Al hacer clic en una sugerencia
@@ -711,6 +1030,7 @@
         });
         */
        // 🔹 Botón para limpiar el mapa, coordenadas y búsqueda
+       /*
         $('#clear-map').click(function() {
             Swal.fire({
                 title: '¿Limpiar todo?',
@@ -761,9 +1081,112 @@
                 }
             });
         });
+        */
+       // ============================================================
+        // 🔹 BOTÓN PARA LIMPIAR MAPA, COORDENADAS Y BÚSQUEDA (CORREGIDO)
+        // ============================================================
+        $('#clear-map').click(function() {
+            Swal.fire({
+                title: '¿Limpiar todo?',
+                text: 'Se eliminarán todas las coordenadas, el polígono y la búsqueda actual.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, limpiar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+
+                    // 1️⃣ Eliminar todas las coordenadas y dejar un campo limpio
+                    $('#coordinates-container').empty().append(`
+                        <div class="coordinate-point mb-2">
+                            <div class="input-group">
+                                <input type="number" step="any" class="form-control coord-lat" placeholder="Latitud" required>
+                                <input type="number" step="any" class="form-control coord-lng" placeholder="Longitud" required>
+                                <div class="input-group-append">
+                                    <button type="button" class="btn btn-danger remove-coord"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+
+                    // 2️⃣ Eliminar completamente polígonos y marcadores del mapa
+                    if (drawnItems) {
+                        drawnItems.eachLayer(layer => map.removeLayer(layer));
+                        drawnItems.clearLayers();
+                    }
+                    if (currentPolygon) {
+                        map.removeLayer(currentPolygon);
+                        currentPolygon = null;
+                    }
+                    if (typeof searchMarker !== 'undefined' && searchMarker) {
+                        map.removeLayer(searchMarker);
+                        searchMarker = null;
+                    }
+
+                    // 3️⃣ Resetear vista inicial del mapa (Lima o la que desees)
+                    if (map) map.setView([-12.0464, -77.0428], 12);
+
+                    // 4️⃣ Limpiar búsqueda de dirección
+                    $('#addressSearch').val('');
+                    $('#addressSuggestions').hide();
+
+                    // 5️⃣ Efecto visual
+                    $('#coordinates-container .coordinate-point').addClass('cleared');
+                    setTimeout(() => $('.coordinate-point').removeClass('cleared'), 700);
+
+                    Swal.fire('Limpio', 'El mapa, coordenadas y búsqueda fueron reiniciados.', 'success');
+                }
+            });
+        });
 
 
         // FIn de limpiar
+
+        // Autoseleccionar por defecto JLO
+        // ============================================================
+        // 🔹 SELECCIÓN AUTOMÁTICA DE UBICACIÓN POR DEFECTO
+        // ============================================================
+        const defaultDept = "Lambayeque";
+        const defaultProv = "Chiclayo";
+        const defaultDist = "Jose Leonardo Ortiz";
+
+        // Esperar a que existan las opciones del select departamento
+        setTimeout(() => {
+            // Seleccionar departamento Lambayeque
+            $('#department_id option').filter(function() {
+                return $(this).text().trim().toLowerCase() === defaultDept.toLowerCase();
+            }).prop('selected', true).trigger('change');
+
+            // Esperar a que se carguen provincias (si se llenan por AJAX)
+            const waitProvince = setInterval(() => {
+                const provOptions = $('#province_id option').map(function() {
+                    return $(this).text().trim().toLowerCase();
+                }).get();
+
+                if (provOptions.includes(defaultProv.toLowerCase())) {
+                    clearInterval(waitProvince);
+                    $('#province_id option').filter(function() {
+                        return $(this).text().trim().toLowerCase() === defaultProv.toLowerCase();
+                    }).prop('selected', true).trigger('change');
+
+                    // Esperar a que se carguen distritos
+                    const waitDistrict = setInterval(() => {
+                        const distOptions = $('#district_id option').map(function() {
+                            return $(this).text().trim().toLowerCase();
+                        }).get();
+
+                        if (distOptions.includes(defaultDist.toLowerCase())) {
+                            clearInterval(waitDistrict);
+                            $('#district_id option').filter(function() {
+                                return $(this).text().trim().toLowerCase() === defaultDist.toLowerCase();
+                            }).prop('selected', true).trigger('change');
+                        }
+                    }, 300);
+                }
+            }, 300);
+        }, 500);
+
+        // Fin de autoselección
         
 
 
@@ -773,6 +1196,17 @@
 
     // Mapa interactivo con Leaflet.js
 </script>
+
+    <script>
+        // existing zones in JSON (preparado por el controlador)
+        window.existingZones = {!! $zonesJson ?? '[]' !!};
+        window.currentZoneId = {!! $zone->id ?? 'null' !!};
+
+        // console.log(existingZones);
+        // const currentZoneId = {!! $zone->id ?? 'null' !!};
+
+        
+    </script>
 
 <style>
 #addressSuggestions .list-group-item {
@@ -801,5 +1235,16 @@
     0% { background-color: #fff3cd; }
     100% { background-color: transparent; }
 }
+
+// Nuevo
+.polygon-restored {
+  animation: bounceBack 0.6s ease;
+}
+
+@keyframes bounceBack {
+  0% { transform: scale(1.1); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 
 </style>
