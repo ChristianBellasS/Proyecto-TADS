@@ -16,7 +16,8 @@ use App\Http\Controllers\admin\UserController;
 use App\Http\Controllers\admin\EmployeeTypeController;
 use App\Http\Controllers\admin\EmployeeController;
 use App\Http\Controllers\admin\ContractController;
-use App\Http\Controllers\admin\AttendanceController;
+
+use App\Http\Controllers\AttendanceController;
 
 // Página principal
 Route::get('/', [AdminController::class, 'index'])->name('admin.index');
@@ -83,3 +84,13 @@ Route::get('vehicles/get-models/{brandId}', [VehicleController::class, 'getModel
 // -------------------
 Route::resource('attendances', AttendanceController::class)->names('admin.attendances');
 Route::get('/admin/employees/search', [AttendanceController::class, 'searchEmployees'])->name('admin.employees.search');
+
+
+
+
+
+// Ruta para mostrar el formulario de asistencia
+Route::view('/asistencia', 'attendance')->name('attendance.form');
+
+// Ruta para procesar el formulario cuando el usuario hace clic en "Registrar Asistencia"
+Route::post('/registrar-asistencia', [AttendanceController::class, 'register'])->name('attendance.register');
