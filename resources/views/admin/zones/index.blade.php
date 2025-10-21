@@ -3,10 +3,17 @@
 @section('title', 'Zonas')
 
 @section('content_header')
-    <button type="button" class="btn btn-success float-right" id="btnRegistrar">
-        <i class="fa fa-plus"></i> Nueva Zona
-    </button>
-    <h1>Lista de Zonas</h1>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>Lista de Zonas</h1>
+        <div>
+            <button id="btnVerMapa" class="btn btn-success">
+                <i class="fas fa-map-marked-alt"></i> Ver mapa de zonas
+            </button>
+            <button type="button" class="btn btn-success" id="btnRegistrar">
+                <i class="fa fa-plus"></i> Nueva Zona
+            </button>
+        </div>
+    </div>
 @stop
 
 @section('content')
@@ -67,38 +74,284 @@
             </div>
         </div>
     </div>
-@stop
 
-<!-- Modal -->
-<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalTitle">Formulario de Zonas</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body" id="modalBody">
-                <!-- El contenido se cargará aquí dinámicamente -->
+    <!-- Modal -->
+    <div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Formulario de Zonas</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <!-- El contenido se cargará aquí dinámicamente -->
+                </div>
             </div>
         </div>
     </div>
-</div>
+
+    <div class="modal fade" id="modalMapaZonas" tabindex="-1" role="dialog" aria-labelledby="modalMapaZonasLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-xl" role="document">
+            <div class="modal-content">
+                <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #035286, #034c7c);">
+                    <h5 class="modal-title font-weight-bold">
+                        <i class="fas fa-map-marked-alt mr-2"></i>Explorador de zonas geográficas
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body p-0">
+                    <!-- Panel de Control -->
+                    <div class="row no-gutters">
+                        <!-- Sidebar de Información -->
+                        <div class="col-md-3 bg-light border-right">
+                            <div class="p-3">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-filter mr-2"></i>Filtros de búsqueda
+                                </h6>
+
+                                <div class="form-group">
+                                    <label class="font-weight-bold text-dark mb-2">
+                                        <i class="fas fa-map-pin text-primary"></i> Departamento
+                                    </label>
+                                    <select id="map_department" class="form-control form-control-sm border-primary">
+                                        <option value="">Seleccione departamento</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="font-weight-bold text-dark mb-2">
+                                        <i class="fas fa-city text-success"></i> Provincia
+                                    </label>
+                                    <select id="map_province" class="form-control form-control-sm border-success">
+                                        <option value="">Seleccione provincia</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="font-weight-bold text-dark mb-2">
+                                        <i class="fas fa-building text-warning"></i> Distrito
+                                    </label>
+                                    <select id="map_district" class="form-control form-control-sm border-warning">
+                                        <option value="">Seleccione distrito</option>
+                                    </select>
+                                </div>
+
+                                <!-- Estadísticas en Tiempo Real -->
+                                <div class="mt-4 pt-3 border-top">
+                                    <h6 class="text-primary mb-3">
+                                        <i class="fas fa-chart-bar mr-2"></i>Estadísticas
+                                    </h6>
+
+                                    <div id="statsContainer" class="text-center">
+                                        <div class="alert alert-info py-2 mb-2">
+                                            <small class="font-weight-bold">ZONAS ENCONTRADAS</small>
+                                            <div class="h4 mb-0" id="zonesCount">0</div>
+                                        </div>
+
+                                        <div class="row text-center">
+                                            <div class="col-12">
+                                                <div class="border rounded p-2 bg-success text-white mb-2">
+                                                    <small>ACTIVAS</small>
+                                                    <div class="h6 mb-0" id="activeZones">0</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="border rounded p-2 bg-secondary text-white">
+                                            <small>TOTAL PUNTOS</small>
+                                            <div class="h6 mb-0" id="totalPoints">0</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Leyenda Interactiva -->
+                                <div class="mt-4 pt-3 border-top">
+                                    <h6 class="text-primary mb-3">
+                                        <i class="fas fa-palette mr-2"></i>Leyenda del Mapa
+                                    </h6>
+                                    <div class="legend-item d-flex align-items-center mb-2">
+                                        <div class="legend-color bg-success mr-2"
+                                            style="width: 20px; height: 10px; border-radius: 2px;"></div>
+                                        <small class="text-dark">Zonas Activas</small>
+                                    </div>
+                                    <div class="legend-item d-flex align-items-center">
+                                        <div class="legend-color bg-primary mr-2"
+                                            style="width: 20px; height: 10px; border-radius: 2px;"></div>
+                                        <small class="text-dark">Distrito Seleccionado</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mapa Principal -->
+                        <div class="col-md-9">
+                            <!-- Barra de Herramientas del Mapa -->
+                            <div class="bg-white border-bottom p-3">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <h6 class="mb-0 text-dark" id="currentLocation">
+                                            <i class="fas fa-crosshairs text-primary mr-2"></i>
+                                            <span id="locationText">Seleccione una ubicación</span>
+                                        </h6>
+                                    </div>
+                                    <div class="col-md-4 text-right">
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary" id="zoomIn">
+                                                <i class="fas fa-search-plus"></i>
+                                            </button>
+                                            <button class="btn btn-outline-primary" id="zoomOut">
+                                                <i class="fas fa-search-minus"></i>
+                                            </button>
+                                            <button class="btn btn-outline-info" id="resetView">
+                                                <i class="fas fa-sync-alt"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Contenedor del Mapa -->
+                            <div class="map-container position-relative">
+                                <div id="mapView" style="height: 550px; width: 100%;"></div>
+
+                                <!-- Loading Overlay -->
+                                <div id="mapLoading"
+                                    class="position-absolute top-0 start-0 w-100 h-100 bg-white d-flex align-items-center justify-content-center"
+                                    style="display: none !important; z-index: 1000;">
+                                    <div class="text-center">
+                                        <div class="spinner-border text-primary mb-2" role="status">
+                                            <span class="sr-only">Cargando...</span>
+                                        </div>
+                                        <p class="text-muted mb-0">Cargando zonas...</p>
+                                    </div>
+                                </div>
+
+                                <!-- Información de Zona Hover -->
+                                <div id="zoneTooltip" class="position-absolute bg-white border rounded shadow-sm p-2"
+                                    style="display: none; z-index: 1000; max-width: 300px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <div class="w-100">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle text-primary mr-1"></i>
+                                    <span id="mapInfo">Haz clic en un polígono para ver detalles</span>
+                                </small>
+                            </div>
+                            <div class="col-md-6 text-right">
+                                <button type="button" class="btn btn-secondary btn-sm mr-2" data-dismiss="modal">
+                                    <i class="fas fa-times mr-1"></i> Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+@stop
+
+@section('css')
+    {{-- CSS de Leaflet --}}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <style>
+        .nav-sidebar .nav-treeview {
+            margin-left: 20px;
+        }
+
+        .nav-sidebar .nav-treeview>.nav-item {
+            margin-left: 10px;
+        }
+
+        #mapView {
+            height: 550px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .map-container {
+            border-radius: 0 0 0.375rem 0;
+            overflow: hidden;
+        }
+
+        .legend-color {
+            border: 1px solid #dee2e6;
+        }
+
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+        }
+
+        #zoneTooltip {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .leaflet-popup-content {
+            border-radius: 8px;
+        }
+
+        .stats-number {
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .border-primary {
+            border-color: #007bff !important;
+        }
+
+        .border-success {
+            border-color: #28a745 !important;
+        }
+
+        .border-warning {
+            border-color: #ffc107 !important;
+        }
+
+        .form-control-sm:focus {
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+            border-color: #007bff;
+        }
+    </style>
+@stop
 
 @section('js')
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
+
     <script>
         $(document).ready(function() {
-            // Inicialización de DataTable
+            // --- Inicializar DataTable ---
             $('#table').DataTable({
-                "language": {
-                    "url": "https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json"
+                language: {
+                    url: "https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json"
                 }
             });
 
-            // Eliminar zona con confirmación
+            // --- Confirmar eliminación ---
             $(document).on('click', '.frmDelete', function(event) {
                 var form = $(this);
                 event.preventDefault();
@@ -118,17 +371,12 @@
                             data: form.serialize(),
                             success: function(response) {
                                 refreshTable();
-                                Swal.fire(
-                                    '¡Eliminado!',
-                                    'La zona ha sido eliminada.',
-                                    'success'
-                                );
+                                Swal.fire('¡Eliminado!', 'La zona ha sido eliminada.',
+                                    'success');
                             },
-                            error: function(xhr) {
-                                Swal.fire(
-                                    'Error',
-                                    'Hubo un problema al eliminar la zona.',
-                                    'error'
+                            error: function() {
+                                Swal.fire('Error',
+                                    'Hubo un problema al eliminar la zona.', 'error'
                                 );
                             }
                         });
@@ -136,7 +384,7 @@
                 });
             });
 
-            // Abrir modal para crear una nueva zona
+            // --- Registrar nueva zona ---
             $('#btnRegistrar').click(function() {
                 $.ajax({
                     url: "{{ route('admin.zones.create') }}",
@@ -145,7 +393,6 @@
                         $('#modal .modal-body').html(response);
                         $('#modal .modal-title').html("Nueva Zona");
                         $('#modal').modal('show');
-                        initializeMap();
                     },
                     error: function(xhr, status, error) {
                         console.log(xhr, status, error);
@@ -153,7 +400,7 @@
                 });
             });
 
-            // Abrir modal para editar una zona existente
+            // --- Editar zona ---
             $(document).on('click', '.btnEditar', function() {
                 var id = $(this).data('id');
                 $.ajax({
@@ -164,7 +411,6 @@
                         $('#modalBody').html(response);
                         $('#modalTitle').text('Editar Zona');
                         $('#modal').modal('show');
-                        initializeMap();
                     },
                     error: function(xhr) {
                         console.log('Error:', xhr);
@@ -174,23 +420,18 @@
                 });
             });
 
-            // Función para refrescar la tabla
+            // --- Refrescar tabla ---
             function refreshTable() {
                 $.ajax({
                     url: "{{ route('admin.zones.index') }}",
                     type: "GET",
                     success: function(response) {
-                        // Extraer solo la tabla del response
                         const tempDiv = $('<div>').html(response);
                         const newTable = tempDiv.find('.table-responsive').html();
-
-                        // Reemplazar solo la tabla
                         $('.table-responsive').html(newTable);
-
-                        // Re-inicializar DataTable
                         $('#table').DataTable({
-                            "language": {
-                                "url": "https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json"
+                            language: {
+                                url: "https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json"
                             }
                         });
                     }
@@ -205,25 +446,452 @@
                 refreshTable();
             });
 
-            // Inicializar mapa (función placeholder)
-            function initializeMap() {
-                console.log('Mapa inicializado');
-                // Aquí iría la inicialización de Google Maps o Leaflet
+            // --- Abrir mapa general ---
+            $('#btnVerMapa').click(function() {
+                $('#modalMapaZonas').modal('show');
+            });
+        });
+
+        let mapGeneral = null;
+        let zoneLayers = [];
+        let currentDistrictMarker = null;
+
+        const DEFAULT_DEPARTMENT_ID = 14;
+        const DEFAULT_PROVINCE_NAME = 'Chiclayo';
+        const DEFAULT_DISTRICT_NAME = 'Jose Leonardo Ortiz';
+
+        // Función para actualizar estadísticas en tiempo real
+        function updateStats(zones) {
+            const totalZones = zones.length;
+            const activeZones = zones.filter(zone => zone.status).length;
+            const totalPoints = zones.reduce((sum, zone) => sum + (zone.coordinates ? zone.coordinates.length : 0), 0);
+
+            $('#zonesCount').text(totalZones);
+            $('#activeZones').text(activeZones);
+            $('#totalPoints').text(totalPoints);
+
+            // Actualizar información de ubicación
+            const districtName = $('#map_district option:selected').text();
+            const provinceName = $('#map_province option:selected').text();
+            const departmentName = $('#map_department option:selected').text();
+
+            if (districtName && districtName !== 'Seleccione distrito') {
+                $('#locationText').html(`<strong>${districtName}</strong>, ${provinceName}, ${departmentName}`);
+                $('#mapInfo').text(`${totalZones} zonas encontradas en esta ubicación`);
             }
+        }
+
+        function initializeGeneralMap() {
+            if (!mapGeneral) {
+                mapGeneral = L.map('mapView').setView([-6.7716, -79.8441], 13);
+
+                // Capa base mejorada
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                }).addTo(mapGeneral);
+
+                // Controles de zoom personalizados
+                L.control.zoom({
+                    position: 'topright'
+                }).addTo(mapGeneral);
+
+                // Escala
+                L.control.scale({
+                    imperial: false,
+                    position: 'bottomleft'
+                }).addTo(mapGeneral);
+
+                setupMapControls();
+            }
+        }
+
+        // Configurar controles del mapa
+        function setupMapControls() {
+            $('#zoomIn').click(function() {
+                mapGeneral.zoomIn();
+            });
+
+            $('#zoomOut').click(function() {
+                mapGeneral.zoomOut();
+            });
+
+            $('#resetView').click(function() {
+                const districtName = $('#map_district option:selected').text();
+                if (districtName && districtName !== 'Seleccione distrito') {
+                    $('#map_district').trigger('change');
+                } else {
+                    mapGeneral.setView([-6.7716, -79.8441], 13);
+                }
+            });
+        }
+
+        // Cargar departamentos
+        function cargarDepartamentos() {
+            $('#map_department').empty().append('<option value="">Seleccione</option>');
+            $('#map_province').empty().append('<option value="">Seleccione</option>');
+            $('#map_district').empty().append('<option value="">Seleccione</option>');
+
+            $.get('{{ route('admin.get.departments') }}')
+                .done(function(departments) {
+                    departments.forEach(dep => {
+                        $('#map_department').append(`<option value="${dep.id}">${dep.name}</option>`);
+                    });
+
+                    // Seleccionar Lambayeque por defecto
+                    $('#map_department').val(DEFAULT_DEPARTMENT_ID);
+
+                    // Cargar provincias del departamento
+                    loadProvinces(DEFAULT_DEPARTMENT_ID).then(function(provinces) {
+                        const foundProv = provinces.find(p =>
+                            p.name.toLowerCase().includes(DEFAULT_PROVINCE_NAME.toLowerCase())
+                        );
+                        if (!foundProv) return;
+                        $('#map_province').val(foundProv.id);
+
+                        // Cargar distritos
+                        loadDistricts(foundProv.id).then(function(districts) {
+                            const foundDist = districts.find(d =>
+                                d.name.toLowerCase().includes(DEFAULT_DISTRICT_NAME.toLowerCase())
+                            );
+                            if (!foundDist) return;
+
+                            $('#map_district').val(foundDist.id).trigger('change');
+                        });
+                    });
+                })
+                .fail(() => console.error('Error al cargar departamentos'));
+        }
+
+        function loadProvinces(departmentId) {
+            return $.get('{{ route('admin.get.provinces', '') }}/' + departmentId)
+                .then(function(data) {
+                    $('#map_province').empty().append('<option value="">Seleccione</option>');
+                    data.forEach(p => $('#map_province').append(`<option value="${p.id}">${p.name}</option>`));
+                    return data;
+                });
+        }
+
+        function loadDistricts(provinceId) {
+            return $.get('{{ route('admin.get.districts', '') }}/' + provinceId)
+                .then(function(data) {
+                    $('#map_district').empty().append('<option value="">Seleccione</option>');
+                    data.forEach(d => $('#map_district').append(`<option value="${d.id}">${d.name}</option>`));
+                    return data;
+                });
+        }
+
+        function geocodeDistrict(districtName) {
+            return new Promise(function(resolve, reject) {
+                // Mostrar loading
+                $('#mapLoading').show();
+
+                $.ajax({
+                    url: 'https://nominatim.openstreetmap.org/search',
+                    data: {
+                        q: districtName + ', Perú',
+                        format: 'json',
+                        limit: 1
+                    },
+                    success: function(data) {
+                        if (data && data.length > 0) {
+                            const result = data[0];
+                            const coords = {
+                                lat: parseFloat(result.lat),
+                                lng: parseFloat(result.lon),
+                                boundingbox: result.boundingbox
+                            };
+                            console.log('Coordenadas encontradas para:', districtName, coords);
+                            resolve(coords);
+                        } else {
+                            reject('No se encontraron coordenadas para: ' + districtName);
+                        }
+                    },
+                    error: function() {
+                        reject('Error en la geocodificación');
+                    }
+                });
+            });
+        }
+
+        function getZoneColor(zone, index) {
+            const colorPalette = [{
+                    border: '#007bff',
+                    fill: 'rgba(0, 123, 255, 0.3)'
+                },
+                {
+                    border: '#28a745',
+                    fill: 'rgba(40, 167, 69, 0.3)'
+                },
+                {
+                    border: '#ffc107',
+                    fill: 'rgba(255, 193, 7, 0.3)'
+                },
+                {
+                    border: '#dc3545',
+                    fill: 'rgba(220, 53, 69, 0.3)'
+                },
+                {
+                    border: '#6f42c1',
+                    fill: 'rgba(111, 66, 193, 0.3)'
+                },
+                {
+                    border: '#e83e8c',
+                    fill: 'rgba(232, 62, 140, 0.3)'
+                },
+                {
+                    border: '#20c997',
+                    fill: 'rgba(32, 201, 151, 0.3)'
+                },
+                {
+                    border: '#fd7e14',
+                    fill: 'rgba(253, 126, 20, 0.3)'
+                }
+            ];
+
+            return colorPalette[index % colorPalette.length];
+        }
+
+        function mostrarZonasEnMapa(zones, districtCoords) {
+            zoneLayers.forEach(layer => mapGeneral.removeLayer(layer));
+            zoneLayers = [];
+
+            if (currentDistrictMarker) {
+                mapGeneral.removeLayer(currentDistrictMarker);
+            }
+
+            let zonasConCoordenadas = 0;
+            let allZoneBounds = [];
+
+            if (zones && zones.length > 0) {
+                zones.forEach((zone, index) => {
+                    if (zone.coordinates && zone.coordinates.length > 0) {
+                        const coords = zone.coordinates.map(c => [parseFloat(c.latitude), parseFloat(c.longitude)]);
+
+                        // Color basado en el estado de la zona
+                        const colorInfo = getZoneColor(zone, index);
+
+                        const polygon = L.polygon(coords, {
+                            color: colorInfo.border,
+                            fillColor: colorInfo.fill,
+                            fillOpacity: 0.4,
+                            weight: 3,
+                            opacity: 0.8
+                        }).addTo(mapGeneral);
+
+                        // Popup mejorado
+                        const popupContent = `
+                        <div class="zone-popup">
+                            <h6 class="text-primary mb-2">
+                                <i class="fas fa-map-marker-alt"></i> ${zone.name || 'Sin nombre'}
+                            </h6>
+                            <div class="mb-2">
+                                <span class="badge badge-${zone.status ? 'success' : 'warning'}">
+                                    ${zone.status ? 'Activa' : 'Inactiva'}
+                                </span>
+                                <span class="badge badge-info ml-1">
+                                    ${zone.coordinates.length} puntos
+                                </span>
+                            </div>
+                            ${zone.description ? `<p class="mb-2 small">${zone.description}</p>` : ''}
+                        </div>
+                    `;
+
+                        polygon.bindPopup(popupContent, {
+                            className: 'zone-popup-container',
+                            maxWidth: 300
+                        });
+
+                        // Eventos de hover para tooltip
+                        polygon.on('mouseover', function(e) {
+                            const tooltip = $(`
+                            <div>
+                                <strong>${zone.name}</strong><br>
+                                <small>${zone.status ? 'Activa' : 'Inactiva'} • ${zone.coordinates.length} puntos</small>
+                            </div>
+                        `);
+                            $('#zoneTooltip').html(tooltip).show();
+                        });
+
+                        polygon.on('mouseout', function() {
+                            $('#zoneTooltip').hide();
+                        });
+
+                        polygon.on('mousemove', function(e) {
+                            const tooltip = $('#zoneTooltip');
+                            const mapContainer = $('#mapView');
+                            const mapOffset = mapContainer.offset();
+
+                            tooltip.css({
+                                left: (e.originalEvent.clientX - mapOffset.left + 10) + 'px',
+                                top: (e.originalEvent.clientY - mapOffset.top - tooltip
+                                    .outerHeight() - 10) + 'px'
+                            });
+                        });
+
+                        zoneLayers.push(polygon);
+                        zonasConCoordenadas++;
+                        allZoneBounds.push(polygon.getBounds());
+                    }
+                });
+
+                // Ajustar vista del mapa
+                if (allZoneBounds.length > 0) {
+                    const group = L.featureGroup(zoneLayers);
+                    mapGeneral.fitBounds(group.getBounds().pad(0.1));
+                } else if (districtCoords) {
+                    // Centrar en el distrito si no hay zonas
+                    mapGeneral.setView([districtCoords.lat, districtCoords.lng], 12);
+                    currentDistrictMarker = L.marker([districtCoords.lat, districtCoords.lng])
+                        .addTo(mapGeneral)
+                        .bindPopup(
+                            `<strong>${$('#map_district option:selected').text()}</strong><br>No hay zonas registradas`)
+                        .openPopup();
+                }
+
+                // Actualizar estadísticas
+                updateStats(zones);
+            } else {
+                // No hay zonas en el distrito
+                if (districtCoords) {
+                    mapGeneral.setView([districtCoords.lat, districtCoords.lng], 12);
+                    currentDistrictMarker = L.marker([districtCoords.lat, districtCoords.lng])
+                        .addTo(mapGeneral)
+                        .bindPopup(
+                            `<strong>${$('#map_district option:selected').text()}</strong><br>No hay zonas registradas en este distrito`
+                        )
+                        .openPopup();
+                }
+                updateStats([]);
+
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Sin zonas',
+                    text: 'No se encontraron zonas registradas para este distrito'
+                });
+            }
+
+            // Ocultar loading
+            $('#mapLoading').hide();
+        }
+
+        // Función para mostrar zonas del distrito
+        function mostrarZonasDistrito(distId) {
+            // Mostrar loading
+            $('#mapLoading').show();
+
+            // Eliminar zonas previas
+            zoneLayers.forEach(layer => mapGeneral.removeLayer(layer));
+            zoneLayers = [];
+
+            if (!distId) {
+                console.log('No se proporcionó ID de distrito');
+                $('#mapLoading').hide();
+                return;
+            }
+
+            $.ajax({
+                url: '{{ route('admin.zones.byDistrict', '') }}/' + distId,
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    const zones = response.zones;
+                    const district = response.district;
+
+                    console.log('Zonas recibidas:', zones);
+                    console.log('Distrito:', district);
+
+                    // Primero, hacer zoom al distrito usando geocodificación
+                    if (district) {
+                        geocodeDistrict(district.name + ', ' + district.province + ', ' + district.department)
+                            .then(function(coords) {
+                                // Una vez que tenemos las coordenadas del distrito, mostrar las zonas
+                                mostrarZonasEnMapa(zones, coords);
+                            })
+                            .catch(function(error) {
+                                console.error('Error en geocodificación:', error);
+                                // Si falla la geocodificación, mostrar zonas con vista por defecto
+                                mostrarZonasEnMapa(zones, null);
+                            });
+                    } else {
+                        mostrarZonasEnMapa(zones, null);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error al cargar zonas:', error);
+                    $('#mapLoading').hide();
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'No se pudieron cargar las zonas del distrito'
+                    });
+                }
+            });
+        }
+
+        // ==== Eventos del Modal del Mapa ====
+        $(document).ready(function() {
+            // Cuando se abre el modal
+            $('#modalMapaZonas').on('shown.bs.modal', function() {
+                initializeGeneralMap();
+                cargarDepartamentos();
+                $('#mapLoading').hide();
+            });
+
+            // Cuando se cierra el modal
+            $('#modalMapaZonas').on('hidden.bs.modal', function() {
+                // Limpiar el mapa pero mantener la instancia para reutilización
+                zoneLayers.forEach(layer => mapGeneral.removeLayer(layer));
+                zoneLayers = [];
+
+                if (currentDistrictMarker) {
+                    mapGeneral.removeLayer(currentDistrictMarker);
+                    currentDistrictMarker = null;
+                }
+            });
+
+            // Cuando cambia el departamento
+            $('#map_department').on('change', function() {
+                const depId = $(this).val();
+                if (depId) {
+                    loadProvinces(depId);
+                } else {
+                    $('#map_province').empty().append('<option value="">Seleccione</option>');
+                    $('#map_district').empty().append('<option value="">Seleccione</option>');
+                }
+            });
+
+            // Cuando cambia la provincia
+            $('#map_province').on('change', function() {
+                const provId = $(this).val();
+                if (provId) {
+                    loadDistricts(provId);
+                } else {
+                    $('#map_district').empty().append('<option value="">Seleccione</option>');
+                }
+            });
+
+            // Cuando cambia el distrito → mostrar zonas
+            $('#map_district').on('change', function() {
+                const distId = $(this).val();
+                if (distId && mapGeneral) {
+                    mostrarZonasDistrito(distId);
+                }
+            });
+
+            // Mover el tooltip con el mouse
+            $(document).on('mousemove', function(e) {
+                const tooltip = $('#zoneTooltip');
+                if (tooltip.is(':visible')) {
+                    const mapContainer = $('#mapView');
+                    const mapOffset = mapContainer.offset();
+
+                    tooltip.css({
+                        left: (e.clientX - mapOffset.left + 10) + 'px',
+                        top: (e.clientY - mapOffset.top - tooltip.outerHeight() - 10) + 'px'
+                    });
+                }
+            });
         });
     </script>
-
-@stop
-
-@section('css')
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        .nav-sidebar .nav-treeview {
-            margin-left: 20px;
-        }
-
-        .nav-sidebar .nav-treeview>.nav-item {
-            margin-left: 10px;
-        }
-    </style>
 @stop
