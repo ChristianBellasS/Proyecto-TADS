@@ -13,6 +13,9 @@ use App\Http\Controllers\admin\VehicleImageController;
 use App\Http\Controllers\admin\UbigeoController;
 use App\Http\Controllers\admin\UserTypeController;
 use App\Http\Controllers\admin\UserController;
+use App\Http\Controllers\admin\EmployeeController;
+use App\Http\Controllers\admin\EmployeeTypeController;
+use App\Http\Controllers\admin\AttendanceController;
 
 Route::get('/',[AdminController::class,'index'])->name('admin.index');
 Route::resource('brands', BrandController::class)->names('admin.brands');
@@ -53,3 +56,7 @@ Route::get('vehicles/images-by-vehicle/{vehicle_id}', [VehicleController::class,
 
 #FUNCIONES - VEHICLES
 Route::get('vehicles/get-models/{brandId}', [VehicleController::class, 'getModelsByBrand'])->name('admin.vehicles.get-models');
+
+// Asistencias
+Route::resource('attendances', AttendanceController::class)->names('admin.attendances');
+Route::get('/admin/employees/search', [AttendanceController::class, 'searchEmployees'])->name('admin.employees.search');

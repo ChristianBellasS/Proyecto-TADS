@@ -351,6 +351,13 @@ return [
                     'icon_color' => 'green',
                     'active' => ['admin/employees*'],
                 ],
+                [
+                    'text' => 'Lista de Asistencias',
+                    'url' => 'admin/attendances',
+                    'icon' => 'fas fa-clipboard-check',
+                    'icon_color' => 'green',
+                    'active' => ['admin/attendances*'],
+                ],
             ],
         ],
         [
