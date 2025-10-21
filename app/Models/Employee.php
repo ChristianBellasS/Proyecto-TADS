@@ -10,6 +10,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
 
+
 class Employee extends Authenticatable
 {
     use HasApiTokens;
@@ -69,6 +70,15 @@ class Employee extends Authenticatable
         'profile_photo_url',
     ];
 
+
+
+    // Método parA LA AUTENTICACIÓN CON DNI
+    public function getAuthIdentifierName()
+    {
+        return 'dni';
+    }
+
+    
     // Relación con EmployeeType
     public function employeeType()
     {
