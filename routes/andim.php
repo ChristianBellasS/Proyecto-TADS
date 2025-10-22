@@ -21,6 +21,7 @@ use App\Http\Controllers\admin\ContractController;
 use App\Http\Controllers\admin\AttendanceController;
 use App\Http\Controllers\admin\VacationController;
 
+// use App\Http\Controllers\admin\AttendanceController;
 
 // Página principal
 Route::get('/', [AdminController::class, 'index'])->name('admin.index');
