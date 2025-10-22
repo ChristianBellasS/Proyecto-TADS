@@ -52,11 +52,23 @@
 <div class="row">
     <div class="col-6">
         <div class="form-group">
-            {!! Form::label('start_date', 'Fecha de Inicio *') !!}
+            <!-- {!! Form::label('start_date', 'Fecha de Inicio *') !!}
             {!! Form::date('start_date', null, [
                 'class' => 'form-control', 
-                'required'
-            ]) !!}
+                'required',
+                'min' => now()
+
+            ]) !!} -->
+            {!! Form::label('start_date', 'Fecha de Inicio *') !!}
+            {!! Form::date('start_date', 
+                isset($vacation) ? $vacation->start_date->format('Y-m-d') : now()->format('Y-m-d'), 
+                [
+                    'class' => 'form-control',
+                    'required',
+                    'min' => now()->format('Y-m-d')
+                ]) !!}
+
+
         </div>
     </div>
     <div class="col-6">

@@ -359,6 +359,13 @@ return [
                     'active' => ['admin/attendances*'],
                 ],
                 
+                [
+                    'text' => 'Contratos',
+                    'url' => 'admin/contracts',
+                    'icon' => 'fas fa-file-contract',
+                    'icon_color' => 'green',
+                    'active' => ['admin/contracts*'],
+                ],
             ],
         ],
         [

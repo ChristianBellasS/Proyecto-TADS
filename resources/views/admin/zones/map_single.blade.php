@@ -19,7 +19,10 @@
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function() {
+// document.addEventListener("DOMContentLoaded", function() {
+/*
+$(document).ready(function() {
+
     const zone = @json($zoneData);
 
     // Inicializar mapa
@@ -29,7 +32,7 @@ document.addEventListener("DOMContentLoaded", function() {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap'
     }).addTo(map);
-    
+
     mapGeneral = L.map('mapView').setView([-6.7716, -79.8441], 13);
 
 
@@ -51,6 +54,56 @@ document.addEventListener("DOMContentLoaded", function() {
         ${zone.description || 'Sin descripción'}
     `).openPopup();
 });
+*/
+<script>
+$(document).ready(function() {
+
+    const zone = @json($zoneData);
+
+    // Esperar un poco para asegurar que el contenedor sea visible
+    setTimeout(() => {
+        // Inicializar mapa
+        const map = L.map('zoneMap').setView(
+            [zone.coordinates[0].lat, zone.coordinates[0].lng],
+            14
+        );
+
+        // Agregar capa base
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+
+        // Crear polígono
+        const polygonCoords = zone.coordinates.map(c => [c.lat, c.lng]);
+        const polygon = L.polygon(polygonCoords, {
+            color: '#007bff',
+            fillColor: '#007bff',
+            fillOpacity: 0.4,
+            weight: 3
+        }).addTo(map);
+
+        // Ajustar vista al polígono
+        map.fitBounds(polygon.getBounds());
+
+        // Popup con info
+        polygon.bindPopup(`
+            <strong>${zone.name}</strong><br>
+            ${zone.district}, ${zone.province}<br>
+            ${zone.description || 'Sin descripción'}
+        `).openPopup();
+
+        // ⚡️ Forzar recalculo del tamaño después de mostrar
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 400);
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 1000); // segundo intento por si el modal se anima lentamente
+    }, 300); // espera inicial antes de crear el mapa
+});
+</script>
+
 </script>
 
 <style>

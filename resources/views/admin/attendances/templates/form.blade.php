@@ -6,7 +6,8 @@
                 <option value="">Seleccione un empleado</option>
                 @if (isset($attendance) && $attendance->employee_id)
                     <option value="{{ $attendance->employee_id }}" selected>
-                        {{ $attendance->employee->names }} {{ $attendance->employee->lastnames }} - {{ $attendance->employee->dni }}
+                        {{ $attendance->employee->name }} {{ $attendance->employee->last_name }} -
+                        {{ $attendance->employee->dni }}
                     </option>
                 @endif
             </select>
@@ -41,21 +42,29 @@
             <div class="col-md-6">
                 <div class="form-group">
                     {!! Form::label('attendance_date', 'Fecha *') !!}
-                    {!! Form::date('attendance_date', isset($attendance) ? ($attendance->formatted_date ?? $attendance->attendance_date->format('Y-m-d')) : null, [
-                        'class' => 'form-control',
-                        'required',
-                        'max' => \Carbon\Carbon::now()->format('Y-m-d')
-                    ]) !!}
+                    {!! Form::date(
+                        'attendance_date',
+                        isset($attendance) ? $attendance->formatted_date ?? $attendance->attendance_date->format('Y-m-d') : null,
+                        [
+                            'class' => 'form-control',
+                            'required',
+                            'max' => \Carbon\Carbon::now()->format('Y-m-d'),
+                        ],
+                    ) !!}
                     <small class="form-text text-muted">Seleccione la fecha de asistencia</small>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="form-group">
                     {!! Form::label('attendance_time', 'Hora *') !!}
-                    {!! Form::time('attendance_time', isset($attendance) ? ($attendance->formatted_time ?? $attendance->attendance_date->format('H:i')) : null, [
-                        'class' => 'form-control',
-                        'required'
-                    ]) !!}
+                    {!! Form::time(
+                        'attendance_time',
+                        isset($attendance) ? $attendance->formatted_time ?? $attendance->attendance_date->format('H:i') : null,
+                        [
+                            'class' => 'form-control',
+                            'required',
+                        ],
+                    ) !!}
                     <small class="form-text text-muted">Seleccione la hora de registro</small>
                 </div>
             </div>
@@ -69,7 +78,7 @@
                         'type',
                         [
                             'ENTRADA' => 'Entrada',
-                            'SALIDA' => 'Salida'
+                            'SALIDA' => 'Salida',
                         ],
                         isset($attendance) ? $attendance->type : null,
                         [
@@ -88,9 +97,9 @@
                         'period',
                         [
                             1 => 'Mañana',
-                            2 => 'Tarde', 
+                            2 => 'Tarde',
                             3 => 'Noche',
-                            4 => 'Día completo'
+                            4 => 'Día completo',
                         ],
                         isset($attendance) ? $attendance->period : null,
                         [
@@ -111,7 +120,7 @@
                             1 => 'Presente',
                             2 => 'Ausente',
                             3 => 'Tarde',
-                            4 => 'Permiso'
+                            4 => 'Permiso',
                         ],
                         isset($attendance) ? $attendance->status : null,
                         [
@@ -161,15 +170,17 @@
                         results: response.data.map(function(employee) {
                             return {
                                 id: employee.id,
-                                text: employee.name,
-                                full_name: employee.name,
+                                text: employee.name + ' ' + employee.last_name +
+                                    ' - DNI: ' + employee.dni,
+                                full_name: employee.name + ' ' + employee.last_name,
                                 dni: employee.dni,
                                 email: employee.email,
-                                phone: employee.phone || 'No registrado'
+                                phone: employee.telefono || 'No registrado'
                             };
                         })
                     };
                 },
+
                 cache: true
             },
             minimumInputLength: 2,
@@ -241,7 +252,7 @@
         @if (isset($attendance) && $attendance->employee_id)
             // Simular datos del empleado para mostrar en la info
             var employeeData = {
-                full_name: '{{ $attendance->employee->names }} {{ $attendance->employee->lastnames }}',
+                full_name: '{{ $attendance->employee->name }} {{ $attendance->employee->last_name }}',
                 dni: '{{ $attendance->employee->dni }}',
                 email: '{{ $attendance->employee->email }}',
                 phone: '{{ $attendance->employee->phone ?? 'No registrado' }}'
@@ -269,7 +280,7 @@
         attendanceDateInput.addEventListener('change', function() {
             const selectedDate = new Date(this.value);
             const today = new Date();
-            
+
             if (selectedDate > today) {
                 alert('No se puede registrar asistencia con fecha futura');
                 this.value = today.toISOString().split('T')[0];
@@ -281,13 +292,13 @@
             const selectedDate = new Date(attendanceDateInput.value);
             const today = new Date();
             const currentDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            
+
             // Solo validar hora si la fecha seleccionada es hoy
             if (selectedDate.getTime() === currentDate.getTime()) {
                 const [hours, minutes] = this.value.split(':');
                 const selectedTime = new Date();
                 selectedTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-                
+
                 if (selectedTime > today) {
                     alert('No se puede registrar asistencia con hora futura');
                     const currentHours = String(today.getHours()).padStart(2, '0');

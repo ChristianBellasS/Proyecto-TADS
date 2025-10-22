@@ -33,8 +33,8 @@ class AttendanceController extends Controller
                         });
                     });
                 })
-                ->orderBy('attendance_date', 'desc')
-                ->orderBy('created_at', 'desc');
+                ->orderBy('attendances.attendance_date', 'desc')
+                ->orderBy('attendances.created_at', 'desc');
 
             return DataTables::of($attendances)
                 ->addColumn('dni', function ($attendance) {
@@ -117,7 +117,7 @@ class AttendanceController extends Controller
         $attendance->load('employee');
         $attendance->formatted_date = $attendance->attendance_date->format('Y-m-d');
         $attendance->formatted_time = $attendance->attendance_date->format('H:i');
-        
+
         return view('admin.attendances.edit', compact('attendance'));
     }
 
@@ -160,8 +160,17 @@ class AttendanceController extends Controller
         ]);
     }
 
-    public function destroy(Attendance $attendance)
+    public function destroy($id)
     {
+        $attendance = Attendance::find($id);
+
+        if (!$attendance) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Asistencia no encontrada.'
+            ], 404);
+        }
+
         $attendance->delete();
 
         return response()->json([
@@ -169,6 +178,7 @@ class AttendanceController extends Controller
             'message' => 'Asistencia eliminada correctamente.'
         ]);
     }
+
 
     public function searchEmployees(Request $request)
     {
