@@ -33,6 +33,8 @@
                             <th>Fecha Creación</th>
                             <th width="10px"></th>
                             <th width="10px"></th>
+                            <th width="10px"></th>
+
                         </tr>
                     </thead>
                     <tbody>
@@ -66,6 +68,11 @@
                                             <i class="fa-solid fa-trash"></i>
                                         </button>
                                     </form>
+                                </td>
+                                <td>
+                                    <button class="btn btn-primary btn-sm btnVerMapaZona" data-id="{{ $zone->id }}">
+                                        <i class="fas fa-map"></i>
+                                    </button>
                                 </td>
                             </tr>
                         @endforeach
@@ -259,6 +266,30 @@
             </div>
         </div>
     </div>
+
+
+    <!-- Nuevo modal para ver mapa de zona -->
+     <!-- Modal: Ver zona en mapa -->
+    <div class="modal fade" id="modalVerZonaMapa" tabindex="-1" role="dialog" aria-labelledby="mapZoneModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="mapZoneModalLabel">
+                        <i class="fas fa-map"></i> Mapa de la Zona
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="mapZoneBody">
+                    <!-- Contenido dinámico -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+     <!--  FInal de nuevo modal -->
 @stop
 
 @section('css')
@@ -730,7 +761,22 @@
                         });
 
                         zoneLayers.push(polygon);
-                        zonasConCoordenadas++;
+                        zonasConCoordenadas++;            $(document).on('click', '.btnVerMapaZona', function() {
+                var id = $(this).data('id');
+
+                $.ajax({
+                    url: "{{ url('admin/zones') }}/" + id + "/map",
+                    type: "GET",
+                    success: function(response) {
+                        $('#mapZoneBody').html(response);
+                        $('#modalVerZonaMapa').modal('show');
+                    },
+                    error: function(xhr) {
+                        console.error(xhr);
+                        Swal.fire('Error', 'No se pudo cargar el mapa de la zona', 'error');
+                    }
+                });
+            });
                         allZoneBounds.push(polygon.getBounds());
                     }
                 });
@@ -892,6 +938,186 @@
                     });
                 }
             });
+
+
+            //Ver mapa 
+            // --- Ver zona en mapa ---
+            /*
+            $(document).on('click', '.btnVerMapaZona', function() {
+                var id = $(this).data('id');
+
+                $.ajax({
+                    url: "{{ url('admin/zones') }}/" + id + "/map",
+                    type: "GET",
+                    success: function(response) {
+                        $('#mapZoneBody').html(response);
+                        $('#modalVerZonaMapa').modal('show');
+                    },
+                    error: function(xhr) {
+                        console.error(xhr);
+                        Swal.fire('Error', 'No se pudo cargar el mapa de la zona', 'error');
+                    }
+                });
+            });
+            // $('#modalMapaZonas').on('shown.bs.modal', function () {
+            //     if (!mapGeneral) {
+            //         initializeGeneralMap();
+            //     } else {
+            //         mapGeneral.invalidateSize(); // 👈 Esto es CLAVE
+            //     }
+
+            //     cargarDepartamentos();
+            //     $('#mapLoading').hide();
+            // });
+            $('#modalMapaZonas').on('shown.bs.modal', function () {
+                initializeGeneralMap(); // tu función para crear el mapa
+                setTimeout(() => {
+                    mapGeneral.invalidateSize(); // 👈 esto fuerza a Leaflet a reajustar el tamaño
+                }, 300);
+
+            });
+            */
+           // variable global para la instancia del mapa del modal
+            let mapZoneInstance = null;
+
+            $(document).off('click', '.btnVerMapaZona').on('click', '.btnVerMapaZona', function() {
+                const id = $(this).data('id');
+
+                // Llamamos a la ruta show (que ya devuelve JSON en tu controlador)
+                $.ajax({
+                    url: "{{ url('admin/zones') }}/" + id, // usa show()
+                    type: "GET",
+                    dataType: "json",
+                    success: function(zone) {
+                        // Construir HTML del modal (detalles + contenedor del mapa)
+                        const detailsHtml = `
+                            <div class="row">
+                                <div class="col-md-5">
+                                    <h5 class="text-primary mb-2"><i class="fas fa-map-marked-alt"></i> ${escapeHtml(zone.name)}</h5>
+                                    <ul class="list-group mb-2">
+                                        <li class="list-group-item"><strong>Departamento:</strong> ${escapeHtml(zone.district?.province?.department?.name ?? '')}</li>
+                                        <li class="list-group-item"><strong>Provincia:</strong> ${escapeHtml(zone.district?.province?.name ?? '')}</li>
+                                        <li class="list-group-item"><strong>Distrito:</strong> ${escapeHtml(zone.district?.name ?? '')}</li>
+                                        <li class="list-group-item"><strong>Estado:</strong> ${zone.status ? '<span class="badge badge-success">Activo</span>' : '<span class="badge badge-danger">Inactivo</span>'}</li>
+                                        <li class="list-group-item"><strong>Puntos:</strong> ${zone.coordinates ? zone.coordinates.length : 0}</li>
+                                    </ul>
+                                    <p><strong>Descripción:</strong><br>${escapeHtml(zone.description ?? 'Sin descripción')}</p>
+                                </div>
+                                <div class="col-md-7">
+                                    <div id="zoneMap" style="height:450px; width:100%;"></div>
+                                </div>
+                            </div>
+                        `;
+
+                        $('#mapZoneBody').html(detailsHtml);
+
+                        // Abrir modal
+                        $('#modalVerZonaMapa').modal('show');
+
+                        // Cuando el modal termine de mostrarse, inicializar el mapa
+                        $('#modalVerZonaMapa').one('shown.bs.modal', function() {
+                            // Eliminar mapa anterior si existe
+                            if (mapZoneInstance) {
+                                try { mapZoneInstance.remove(); } catch(e) { console.warn(e); }
+                                mapZoneInstance = null;
+                            }
+
+                            // Si no hay coordenadas, mostrar mensaje
+                            if (!zone.coordinates || zone.coordinates.length === 0) {
+                                $('#zoneMap').html('<div class="alert alert-info">No hay coordenadas para esta zona</div>');
+                                return;
+                            }
+
+                            // Usar la primera coord como centro temporal
+                            const first = zone.coordinates[0];
+                            mapZoneInstance = L.map('zoneMap', { zoomControl: true }).setView([parseFloat(first.latitude), parseFloat(first.longitude)], 14);
+
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                maxZoom: 19,
+                                attribution: '&copy; OpenStreetMap'
+                            }).addTo(mapZoneInstance);
+
+                            // Construir latlngs
+                            const latlngs = zone.coordinates.map(c => [parseFloat(c.latitude), parseFloat(c.longitude)]);
+
+                            // Dibujar polígono (solo lectura)
+                            const polygon = L.polygon(latlngs, {
+                                color: '#007bff',
+                                fillColor: 'rgba(0,123,255,0.3)',
+                                weight: 3,
+                                fillOpacity: 0.4,
+                                interactive: false
+                            }).addTo(mapZoneInstance);
+
+                            // Ajustar vista
+                            try {
+                                mapZoneInstance.fitBounds(polygon.getBounds().pad(0.1));
+                            } catch(e) {
+                                mapZoneInstance.setView([parseFloat(first.latitude), parseFloat(first.longitude)], 13);
+                            }
+
+                            // Forzar recalculo de tamaño un par de veces por seguridad
+                            setTimeout(() => mapZoneInstance.invalidateSize(), 200);
+                            setTimeout(() => mapZoneInstance.invalidateSize(), 600);
+                        });
+
+                        // Al cerrar el modal intenta remover mapa
+                        $('#modalVerZonaMapa').off('hidden.bs.modal').on('hidden.bs.modal', function() {
+                            if (mapZoneInstance) {
+                                try { mapZoneInstance.remove(); } catch(e) {}
+                                mapZoneInstance = null;
+                            }
+                            $('#mapZoneBody').empty();
+                        });
+                    },
+                    error: function(xhr) {
+                        console.error('Error cargando zona:', xhr);
+                        Swal.fire('Error', 'No se pudo cargar los datos de la zona', 'error');
+                    }
+                });
+            });
+
+            // pequeña utilidad para escapar HTML (previene inyección)
+            function escapeHtml(text) {
+                if (!text && text !== 0) return '';
+                return String(text)
+                    .replace(/&/g, '&amp;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+            }
+
+
+
+
+            // FIn de ver mapa
         });
+
+
+
     </script>
+
+        <!-- ============================================================
+    DEPENDENCIAS LEAFLET
+    ============================================================= -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+    <!-- Añadir Turf.js (antes de tu JS que usa turf) -->
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+
+    <!-- <script>
+        window.existingZones = {!! $zonesJson ?? '[]' !!};
+
+        console.log(existingZones);
+        window.currentZoneId = {!! $zone->id ?? 'null' !!};
+
+    </script> -->
+
+
+
 @stop

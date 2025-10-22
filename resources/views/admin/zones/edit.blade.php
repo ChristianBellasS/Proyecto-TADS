@@ -166,4 +166,8 @@
             });
         });
     });
+
+    // window.existingZones = {!! $zonesJson ?? '[]' !!};
+    // window.currentZoneId = {!! $zone->id ?? 'null' !!};
+
 </script>

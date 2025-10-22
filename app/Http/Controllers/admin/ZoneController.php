@@ -21,7 +21,20 @@ class ZoneController extends Controller
     {
         $departments = Department::all();
         $districts = District::with('province.department')->get();
-        return view('admin.zones.create', compact('departments', 'districts'));
+        // Obtener todas las zonas con sus coordenadas para mostrarlas en el mapa
+        $zones = Zone::with('coordinates')->get();
+        // Preparar JSON seguro para la vista (lat, lng como float)
+        $zonesJson = $zones->map(function($z) {
+            return [
+                'id' => $z->id,
+                'name' => $z->name,
+                'coords' => $z->coordinates->map(function($c) {
+                    return [(float)$c->latitude, (float)$c->longitude];
+                })->toArray()
+            ];
+        })->toJson();
+
+        return view('admin.zones.create', compact('departments', 'districts', 'zones','zonesJson'));
     }
 
     public function store(Request $request)
@@ -69,7 +82,25 @@ class ZoneController extends Controller
         $departments = Department::all();
         $districts = District::with('province.department')->get();
         $zone->load('coordinates');
-        return view('admin.zones.edit', compact('zone', 'departments', 'districts'));
+        // Obtener todas las zonas con sus coordenadas para mostrarlas en el mapa
+        // 🔹 Cargar la zona actual con coordenadas
+        $zone->load('coordinates');
+        // 🔹 Cargar otras zonas para mostrarlas en el mapa
+        $zones = Zone::with('coordinates')
+        ->where('id', '!=', $zone->id)
+        ->get();
+
+        $zonesJson = $zones->map(function($z) {
+            return [
+                'id' => $z->id,
+                'name' => $z->name,
+                'coords' => $z->coordinates->map(function($c) {
+                    return [(float)$c->latitude, (float)$c->longitude];
+                })->toArray()
+            ];
+        })->toJson();
+
+        return view('admin.zones.edit', compact('zone', 'departments', 'districts', 'zones', 'zonesJson'));
     }
 
     public function update(Request $request, Zone $zone)
@@ -98,7 +129,10 @@ class ZoneController extends Controller
                 'zone_id' => $zone->id,
                 'latitude' => $coord['latitude'],
                 'longitude' => $coord['longitude'],
-                'order' => $index
+                // 'order' => $indexPrimero, desde tu controlador de Laravel, cuando cargues el formulario, necesitas pasar los polígonos existentes (todas las zonas, menos la actual si estás editando una).
+                'order' => $index, // ✅ Este es el correcto
+
+
             ]);
         }
 
@@ -205,4 +239,27 @@ class ZoneController extends Controller
 
         return response()->json($zones);
     }
+
+
+    public function mapView(Zone $zone)
+    {
+        $zone->load(['coordinates', 'district.province.department']);
+
+        $zoneData = [
+            'id' => $zone->id,
+            'name' => $zone->name,
+            'description' => $zone->description,
+            'status' => $zone->status,
+            'district' => $zone->district->name ?? '',
+            'province' => $zone->district->province->name ?? '',
+            'department' => $zone->district->province->department->name ?? '',
+            'coordinates' => $zone->coordinates->map(fn($c) => [
+                'lat' => (float) $c->latitude,
+                'lng' => (float) $c->longitude
+            ])->toArray(),
+        ];
+
+        return view('admin.zones.map_single', compact('zoneData'));
+    }
+
 }

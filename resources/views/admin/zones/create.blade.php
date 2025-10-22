@@ -109,5 +109,19 @@
                 },
             });
         });
+
+        // Inicializar el mapa y otras funcionalidades aquí
+            // 🔹 Pasar zonas existentes al mapa (excluyendo la actual si aplica)
+        // const existingZones = @json($zones->map(function($z){
+        //     return [
+        //         'id' => $z->id,
+        //         'name' => $z->name,
+        //         'coords' => $z->coordinates->map(fn($c) => [(float)$c->latitude, (float)$c->longitude])
+        //     ];
+        // }));
+        window.existingZones = {!! $zonesJson ?? '[]' !!};
+        // ...
+
+
     });
 </script>

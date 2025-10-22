@@ -17,7 +17,11 @@ use App\Http\Controllers\admin\EmployeeTypeController;
 use App\Http\Controllers\admin\EmployeeController;
 use App\Http\Controllers\admin\ContractController;
 
-use App\Http\Controllers\AttendanceController;
+// use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\admin\AttendanceController;
+use App\Http\Controllers\admin\VacationController;
+
+// use App\Http\Controllers\admin\AttendanceController;
 
 // Página principal
 Route::get('/', [AdminController::class, 'index'])->name('admin.index');
@@ -70,6 +74,9 @@ Route::get('admin/get-districts/{province}', [UbigeoController::class, 'getDistr
 // -------------------
 Route::resource('vehicleimages', VehicleImageController::class)->names('admin.vehicleimages');
 
+Route::get('zones/{zone}/map', [ZoneController::class, 'mapView'])->name('admin.zones.mapView');
+
+
 Route::get('vehicles/{id}/manage-images', [VehicleController::class, 'manageImages'])->name('admin.vehicles.manage-images');
 Route::post('vehicles/{id}/store-images', [VehicleController::class, 'storeImages'])->name('admin.vehicles.store-images');
 Route::post('vehicles/set-profile/{id}', [VehicleController::class, 'setAsProfile'])->name('admin.vehicles.set-profile');
@@ -84,6 +91,16 @@ Route::get('vehicles/get-models/{brandId}', [VehicleController::class, 'getModel
 // -------------------
 Route::resource('attendances', AttendanceController::class)->names('admin.attendances');
 Route::get('/admin/employees/search', [AttendanceController::class, 'searchEmployees'])->name('admin.employees.search');
+
+
+// Gestión de Vacaciones
+Route::resource('vacations', VacationController::class)->names('admin.vacations');
+    
+// Rutas adicionales para vacaciones
+Route::post('vacations/{vacation}/approve', [VacationController::class, 'approve'])->name('admin.vacations.approve');
+Route::post('vacations/{vacation}/reject', [VacationController::class, 'reject'])->name('admin.vacations.reject');
+Route::post('vacations/{vacation}/cancel', [VacationController::class, 'cancel'])->name('admin.vacations.cancel');
+Route::get('vacations/{employee}/available-days', [VacationController::class, 'getAvailableDays'])->name('admin.vacations.available-days');
 
 
 

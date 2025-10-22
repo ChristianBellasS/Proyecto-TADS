@@ -108,4 +108,50 @@ class Employee extends Authenticatable
     {
         return $this->name . ' ' . $this->last_name;
     }
+
+    //Nueva relación con Vacation
+
+    // Relación con vacaciones
+    public function vacations()
+    {
+        return $this->hasMany(Vacation::class);
+    }
+
+    // Obtener vacaciones aprobadas
+    public function approvedVacations()
+    {
+        return $this->vacations()->where('status', 'Approved');
+    }
+
+    // Obtener vacaciones pendientes
+    public function pendingVacations()
+    {
+        return $this->vacations()->where('status', 'Pending');
+    }
+
+    // Verificar si tiene vacaciones activas
+    public function hasActiveVacations()
+    {
+        return $this->vacations()->active()->exists();
+    }
+
+    // Obtener días de vacaciones disponibles para el año actual
+    public function getAvailableVacationDaysAttribute()
+    {
+        return Vacation::getRemainingVacationDays($this->id);
+    }
+
+    // Verificar si puede solicitar vacaciones
+    public function canRequestVacation()
+    {
+        return Vacation::canEmployeeRequestVacation($this->id);
+    }
+    // Scope para empleados activos
+    public function scopeActive($query)
+    {
+        return $query->where('estado', 'activo');
+    }
+    // Fin de la clase Employee
+
+
 }
