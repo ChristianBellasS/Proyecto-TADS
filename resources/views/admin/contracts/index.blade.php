@@ -29,36 +29,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($contracts as $contract)
-                            <tr>
-                                <td>{{ $contract->employee->full_name }}</td>
-                                <td>{{ $contract->contract_type }}</td>
-                                <td>{{ $contract->start_date }}</td>
-                                <td>{{ $contract->end_date ?? '—' }}</td>
-                                <td>S/ {{ number_format($contract->salary, 2) }}</td>
-                                <td>{{ $contract->department->name }}</td>
-                                <td>{{ $contract->position->name }}</td>
-                                <td>
-                                    <span class="badge badge-{{ $contract->is_active ? 'success' : 'danger' }}">
-                                        {{ $contract->is_active ? 'Activo' : 'Inactivo' }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <button class="btn btn-warning btn-sm btnEditar" data-id="{{ $contract->id }}">
-                                        <i class="fa-solid fa-pen-to-square"></i>
-                                    </button>
-                                </td>
-                                <td>
-                                    <form action="{{ route('admin.contracts.destroy', $contract->id) }}" method="POST" class="frmDelete">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-danger btn-sm">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                        @endforeach
+                        <!-- Los datos se cargarán via AJAX -->
                     </tbody>
                 </table>
             </div>
@@ -67,8 +38,7 @@
 @stop
 
 <!-- Modal -->
-<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
-    aria-hidden="true">
+<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content border-0 shadow">
             <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #035286, #034c7c);">
@@ -79,18 +49,46 @@
                     <span aria-hidden="true" class="h5 mb-0">&times;</span>
                 </button>
             </div>
-            <div class="modal-body p-4" id="modalBody" style="max-height: 80vh; overflow-y: auto;">
+            <div class="modal-body p-4" id="modalBody" style="max-height: 70vh; overflow-y: auto;">
                 <!-- El contenido se cargará aquí dinámicamente -->
             </div>
         </div>
     </div>
 </div>
 
+@section('css')
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css" rel="stylesheet" />
+@stop
+
 @section('js')
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         $(document).ready(function() {
+            // Inicialización de DataTable con AJAX
+            var table = $('#table').DataTable({
+                "ajax": "{{ route('admin.contracts.index') }}",
+                "columns": [
+                    { "data": "employee_name" },
+                    { "data": "contract_type" },
+                    { "data": "start_date" },
+                    { "data": "end_date" },
+                    { "data": "salary" },
+                    { "data": "department_name" },
+                    { "data": "position_name" },
+                    { "data": "is_active_badge" },
+                    { "data": "edit", "orderable": false, "searchable": false },
+                    { "data": "delete", "orderable": false, "searchable": false }
+                ],
+                "language": {
+                    "url": "https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json"
+                },
+                "order": [[2, "desc"]] // Ordenar por fecha de inicio descendente
+            });
+
             // Abrir modal para crear contrato
-            $('#btnRegistrar').click(function() {
+            $('#btnRegistrar').on('click', function() {
                 $.ajax({
                     url: "{{ route('admin.contracts.create') }}",
                     type: "GET",
@@ -113,14 +111,13 @@
                                 contentType: false,
                                 success: function(response) {
                                     $('#modal').modal('hide');
+                                    table.ajax.reload();
                                     Swal.fire({
                                         icon: 'success',
                                         title: '¡Éxito!',
                                         text: response.message,
                                         showConfirmButton: false,
                                         timer: 1500
-                                    }).then(function() {
-                                        location.reload();
                                     });
                                 },
                                 error: function(xhr) {
@@ -148,11 +145,12 @@
                             });
                         });
                     },
-                    error: function() {
+                    error: function(xhr) {
+                        console.error('Error al cargar formulario:', xhr);
                         Swal.fire({
                             icon: 'error',
                             title: 'Error',
-                            text: 'No se pudo cargar el formulario'
+                            text: 'No se pudo cargar el formulario de creación'
                         });
                     }
                 });
@@ -177,20 +175,19 @@
 
                             $.ajax({
                                 url: form.attr('action'),
-                                type: form.attr('method'),
+                                type: 'POST',
                                 data: formData,
                                 processData: false,
                                 contentType: false,
                                 success: function(response) {
                                     $('#modal').modal('hide');
+                                    table.ajax.reload();
                                     Swal.fire({
                                         icon: 'success',
                                         title: '¡Actualizado!',
                                         text: response.message,
                                         showConfirmButton: false,
                                         timer: 1500
-                                    }).then(function() {
-                                        location.reload();
                                     });
                                 },
                                 error: function(xhr) {
@@ -218,11 +215,12 @@
                             });
                         });
                     },
-                    error: function() {
+                    error: function(xhr) {
+                        console.error('Error al cargar formulario de edición:', xhr);
                         Swal.fire({
                             icon: 'error',
                             title: 'Error',
-                            text: 'No se pudo cargar el formulario'
+                            text: 'No se pudo cargar el formulario de edición'
                         });
                     }
                 });
@@ -248,14 +246,13 @@
                             type: 'POST',
                             data: form.serialize(),
                             success: function(response) {
+                                table.ajax.reload();
                                 Swal.fire({
                                     icon: 'success',
                                     title: '¡Desactivado!',
                                     text: response.message,
                                     showConfirmButton: false,
                                     timer: 1500
-                                }).then(function() {
-                                    location.reload();
                                 });
                             },
                             error: function(xhr) {
@@ -271,8 +268,4 @@
             });
         });
     </script>
-@stop
-
-@section('css')
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 @stop

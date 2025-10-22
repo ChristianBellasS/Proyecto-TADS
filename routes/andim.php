@@ -111,3 +111,17 @@ Route::view('/asistencia', 'attendance')->name('attendance.form');
 
 // Ruta para procesar el formulario cuando el usuario hace clic en "Registrar Asistencia"
 Route::post('/registrar-asistencia', [AttendanceController::class, 'register'])->name('attendance.register');
+
+
+// Nuevo cambio de contratos
+// Ruta para mostrar el formulario de asistencia
+Route::view('/asistencia', 'attendance')->name('attendance.form');
+
+// Ruta para procesar el formulario cuando el usuario hace clic en "Registrar Asistencia"
+Route::post('/registrar-asistencia', [AttendanceController::class, 'register'])->name('attendance.register');
+
+
+// Agregar estas rutas dentro del grupo de admin/contracts
+Route::get('admin/contracts/get-all-employees', [ContractController::class, 'getAllEmployees'])->name('admin.contracts.get-all-employees');
+Route::get('admin/contracts/get-departments', [ContractController::class, 'getDepartments'])->name('admin.contracts.get-departments');
+Route::get('contracts/check-last-temporal', [ContractController::class, 'checkLastTemporalContract'])->name('admin.contracts.check-last-temporal');
