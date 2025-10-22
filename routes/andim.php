@@ -17,7 +17,7 @@ use App\Http\Controllers\admin\EmployeeTypeController;
 use App\Http\Controllers\admin\EmployeeController;
 use App\Http\Controllers\admin\ContractController;
 
-use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\admin\AttendanceController;
 
 // Página principal
 Route::get('/', [AdminController::class, 'index'])->name('admin.index');
