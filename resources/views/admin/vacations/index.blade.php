@@ -59,7 +59,8 @@
                                 <td>{{ Str::limit($vacation->notes, 30) }}</td>
                                 <td>{{ $vacation->created_at->format('d/m/Y') }}</td>
                                 <td>
-                                    <div class="btn-group btn-group-sm">
+                                    
+                                    <!-- <div class="btn-group btn-group-sm">
                                         @if($vacation->status == 'Pending')
                                             <button class="btn btn-success btn-approve" data-id="{{ $vacation->id }}" title="Aprobar">
                                                 <i class="fas fa-check"></i>
@@ -90,7 +91,41 @@
                                                 </button>
                                             </form>
                                         @endif
+                                    </div> -->
+                                    <div class="btn-group btn-group-sm action-buttons">
+                                        @if($vacation->status == 'Pending')
+                                            <button class="btn btn-success btn-approve" data-id="{{ $vacation->id }}" title="Aprobar">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-reject" data-id="{{ $vacation->id }}" title="Rechazar">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        @endif
+
+                                        @if(in_array($vacation->status, ['Pending', 'Approved']))
+                                            <button class="btn btn-warning btn-cancel" data-id="{{ $vacation->id }}" title="Cancelar">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                        @endif
+
+                                        @if($vacation->status == 'Pending')
+                                            <button class="btn btn-info btnEditar" data-id="{{ $vacation->id }}" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        @endif
+
+                                        @if($vacation->status == 'Pending')
+                                            <form action="{{ route('admin.vacations.destroy', $vacation->id) }}" method="POST" class="frmDelete">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-danger" title="Eliminar">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        @endif
                                     </div>
+
+                                    
                                 </td>
                             </tr>
                         @endforeach
@@ -355,5 +390,19 @@
 @section('css')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        .action-buttons .btn {
+            margin-right: 4px;      /* Espacio entre botones */
+            min-width: 40px;        /* Asegura que todos tengan ancho mínimo uniforme */
+        }
 
+        .action-buttons .btn:last-child {
+            margin-right: 0;        /* El último botón no necesita margen */
+        }
+
+        .action-buttons form {
+            display: inline-block;  /* Para alinear el form con los botones */
+            margin: 0;              /* Quitar márgenes extra del form */
+        }
+    </style>
 @stop

@@ -85,6 +85,7 @@ class Vacation extends Model
     }
 
     // Validar si el empleado puede solicitar vacaciones (solo nombrado y contrato permanente)
+    /*
     public static function canEmployeeRequestVacation($employeeId)
     {
         $employee = Employee::with('employeetype')->find($employeeId);
@@ -97,6 +98,35 @@ class Vacation extends Model
         $allowedTypes = ['nombrado', 'contrato permanente'];
         return in_array(strtolower($employee->employeetype->name), $allowedTypes);
     }
+        */
+    //
+    // Validar si el empleado puede solicitar vacaciones (solo según contrato activo)
+    public static function canEmployeeRequestVacation($employeeId)
+    {
+        // Obtener empleado
+        $employee = Employee::find($employeeId);
+
+        if (!$employee) {
+            return false;
+        }
+
+        // Obtener el contrato activo más reciente
+        $contract = $employee->contracts()
+                            ->where('is_active', true)
+                            ->latest('start_date')
+                            ->first();
+
+        if (!$contract) {
+            return false;
+        }
+
+        // Solo personal con contrato 'nombrado' o 'contrato permanente' puede solicitar vacaciones
+        $allowedTypes = ['nombrado', 'contrato permanente'];
+
+        return in_array(strtolower($contract->contract_type), $allowedTypes);
+    }
+
+    ///
 
     // Validar días máximos de vacaciones (30 días por año)
     public static function getRemainingVacationDays($employeeId, $year = null)

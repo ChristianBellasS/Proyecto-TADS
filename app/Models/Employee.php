@@ -151,6 +151,13 @@ class Employee extends Authenticatable
     {
         return $query->where('estado', 'activo');
     }
+
+    // En Employee.php
+    public function contracts()
+    {
+        return $this->hasMany(Contract::class);
+    }
+
     // Fin de la clase Employee
 
 

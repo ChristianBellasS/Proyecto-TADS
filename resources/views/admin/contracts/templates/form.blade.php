@@ -37,6 +37,8 @@
                 <option value="Temporal" {{ (isset($contract) && $contract->contract_type == 'Temporal') ? 'selected' : '' }}>Temporal</option>
                 <option value="Por Obra o Servicio" {{ (isset($contract) && $contract->contract_type == 'Por Obra o Servicio') ? 'selected' : '' }}>Por Obra o Servicio</option>
                 <option value="Prácticas" {{ (isset($contract) && $contract->contract_type == 'Prácticas') ? 'selected' : '' }}>Prácticas</option>
+                <option value="Nombrado" {{ (isset($contract) && $contract->contract_type == 'Nombrado') ? 'selected' : '' }}>Nombrado</option>
+
             </select>
         </div>
 
