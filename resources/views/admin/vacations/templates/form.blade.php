@@ -74,7 +74,10 @@
     <div class="col-6">
         <div class="form-group">
             {!! Form::label('end_date', 'Fecha de Fin *') !!}
-            {!! Form::date('end_date', null, [
+            {!! Form::date('end_date', 
+                isset($vacation) ? $vacation->end_date->format('Y-m-d') : null, 
+
+                [
                 'class' => 'form-control',
                 'readonly' => true,
                 'required'
