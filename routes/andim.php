@@ -49,6 +49,15 @@ Route::get('contracts/get-departments', [ContractController::class, 'getDepartme
 
 Route::resource('contracts', ContractController::class)->names('admin.contracts');
 
+Route::get('/admin/contracts/search-employees', [ContractController::class, 'searchEmployees'])
+    ->name('admin.contracts.search-employees');
+Route::get('/admin/contracts/check-employee-contracts', [ContractController::class, 'checkEmployeeContracts'])
+    ->name('admin.contracts.check-employee-contracts');
+Route::get('/admin/contracts/check-last-temporal', [ContractController::class, 'checkLastTemporalContract'])
+    ->name('admin.contracts.check-last-temporal');
+Route::get('/admin/contracts/get-all-employees', [ContractController::class, 'getAllEmployees'])
+    ->name('admin.contracts.get-all-employees');
+
 // -------------------
 // 🔹 ZONAS
 // -------------------
