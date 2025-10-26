@@ -90,4 +90,10 @@ class Vehicle extends Model
     {
         return $this->vehicleImages()->exists();
     }
+
+    
+    public function employeeGroups()
+    {
+        return $this->hasMany(EmployeeGroup::class);
+    }
 }

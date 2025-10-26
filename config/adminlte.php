@@ -448,6 +448,21 @@ return [
                 ],
             ],
         ],
+        [   'text' => 'PROGRAMACIÓN',
+            'icon' => 'fas fa-cogs',
+            'submenu' => [
+                [
+                    'text' => 'Turnos',
+                    'url' => 'admin/contracts',
+                    'icon' => 'fas fa-file-contract',
+                ],
+                [
+                    'text' => 'Grupos de Personal',
+                    'url' => 'admin/employeegroups',
+                    'icon' => 'fas fa-users',
+                ],
+            ],
+        ],
     ],
 
     /*
