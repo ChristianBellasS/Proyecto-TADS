@@ -16,6 +16,7 @@ use App\Http\Controllers\admin\UserController;
 use App\Http\Controllers\admin\EmployeeTypeController;
 use App\Http\Controllers\admin\EmployeeController;
 use App\Http\Controllers\admin\ContractController;
+use App\Http\Controllers\admin\EmployeeGroupController;
 
 // use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\admin\AttendanceController;
@@ -37,7 +38,7 @@ Route::resource('users', UserController::class)->names('admin.users');
 Route::resource('ubigeo', UbigeoController::class)->names('admin.ubigeo');
 Route::resource('employeetypes', EmployeeTypeController::class)->names('admin.employeetypes');
 Route::resource('employees', EmployeeController::class)->names('admin.employees');
-
+Route::resource('employeegroups', EmployeeGroupController::class)->names('admin.employeegroups');
 // -------------------
 // 🔹 CONTRATOS
 // -------------------
@@ -48,6 +49,15 @@ Route::get('contracts/get-departments', [ContractController::class, 'getDepartme
     ->name('admin.contracts.get-departments');
 
 Route::resource('contracts', ContractController::class)->names('admin.contracts');
+
+Route::get('/admin/contracts/search-employees', [ContractController::class, 'searchEmployees'])
+    ->name('admin.contracts.search-employees');
+Route::get('/admin/contracts/check-employee-contracts', [ContractController::class, 'checkEmployeeContracts'])
+    ->name('admin.contracts.check-employee-contracts');
+Route::get('/admin/contracts/check-last-temporal', [ContractController::class, 'checkLastTemporalContract'])
+    ->name('admin.contracts.check-last-temporal');
+Route::get('/admin/contracts/get-all-employees', [ContractController::class, 'getAllEmployees'])
+    ->name('admin.contracts.get-all-employees');
 
 // -------------------
 // 🔹 ZONAS
@@ -125,3 +135,7 @@ Route::post('/registrar-asistencia', [AttendanceController::class, 'register'])-
 Route::get('admin/contracts/get-all-employees', [ContractController::class, 'getAllEmployees'])->name('admin.contracts.get-all-employees');
 Route::get('admin/contracts/get-departments', [ContractController::class, 'getDepartments'])->name('admin.contracts.get-departments');
 Route::get('contracts/check-last-temporal', [ContractController::class, 'checkLastTemporalContract'])->name('admin.contracts.check-last-temporal');
+
+
+// Rutas para buscar empleados en el modulo de turnos
+Route::get('admin/employeegroups/search/employees', [EmployeeGroupController::class, 'searchEmployees'])->name('admin.employeegroups.search.employees');

@@ -160,5 +160,35 @@ class Employee extends Authenticatable
 
     // Fin de la clase Employee
 
+        // Relaciones como conductor
+    public function driver()
+    {
+        return $this->belongsTo(Employee::class, 'driver_id')->where('employeetype_id', 1);
+    }
+
+    public function assistant1()
+    {
+        return $this->belongsTo(Employee::class, 'assistant1_id')->where('employeetype_id', 2);
+    }
+
+    public function assistant2()
+    {
+        return $this->belongsTo(Employee::class, 'assistant2_id')->where('employeetype_id', 2);
+    }
+
+    public function assistant3()
+    {
+        return $this->belongsTo(Employee::class, 'assistant3_id')->where('employeetype_id', 2);
+    }
+
+    public function assistant4()
+    {
+        return $this->belongsTo(Employee::class, 'assistant4_id')->where('employeetype_id', 2);
+    }
+
+    public function assistant5()
+    {
+        return $this->belongsTo(Employee::class, 'assistant5_id')->where('employeetype_id', 2);
+    }
 
 }

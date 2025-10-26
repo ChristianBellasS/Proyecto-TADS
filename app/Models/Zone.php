@@ -30,4 +30,10 @@ class Zone extends Model
     {
         return $this->hasOneThrough(Department::class, Province::class, 'id', 'id', 'province_id', 'department_id');
     }
+
+    // Metodo utilizado para Registrar Grupos de Personal
+    public function employeeGroups()
+    {
+        return $this->hasMany(EmployeeGroup::class);
+    }
 }
