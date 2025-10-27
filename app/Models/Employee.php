@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
+use Carbon\Carbon;
 
 
 class Employee extends Authenticatable
@@ -78,7 +79,7 @@ class Employee extends Authenticatable
         return 'dni';
     }
 
-    
+
     // Relación con EmployeeType
     public function employeeType()
     {
@@ -160,7 +161,7 @@ class Employee extends Authenticatable
 
     // Fin de la clase Employee
 
-        // Relaciones como conductor
+    // Relaciones como conductor
     public function driver()
     {
         return $this->belongsTo(Employee::class, 'driver_id')->where('employeetype_id', 1);
@@ -191,4 +192,192 @@ class Employee extends Authenticatable
         return $this->belongsTo(Employee::class, 'assistant5_id')->where('employeetype_id', 2);
     }
 
+    // para programación
+
+    public function groupDetails()
+    {
+        return $this->hasMany(GroupDetail::class);
+    }
+
+    public function schedulings()
+    {
+        return $this->belongsToMany(Scheduling::class, 'groupdetails', 'employee_id', 'scheduling_id');
+    }
+
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
+    // Método para verificar disponibilidad
+    public function isAvailableForDate($date)
+    {
+        // Verificar contrato activo
+        $hasActiveContract = $this->contracts()
+            ->where('is_active', true)
+            ->whereDate('start_date', '<=', $date)
+            ->where(function ($query) use ($date) {
+                $query->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', $date);
+            })->exists();
+
+        // Verificar vacaciones
+        $onVacation = $this->vacations()
+            ->where('status', 'Approved')
+            ->whereDate('start_date', '<=', $date)
+            ->whereDate('end_date', '>=', $date)
+            ->exists();
+
+        return $hasActiveContract && !$onVacation;
+    }
+
+    // Relación con grupos a través de configgroups
+    public function employeeGroups()
+    {
+        return $this->belongsToMany(EmployeeGroup::class, 'configgroups', 'employee_id', 'employeegroup_id')
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    // Accesor para obtener la posición/cargo desde EmployeeType
+    public function getPositionAttribute()
+    {
+        return $this->employeeType ? $this->employeeType->name : 'Sin asignar';
+    }
+
+    // Método para verificar si es conductor
+    public function isDriver()
+    {
+        return $this->employeeGroups()->wherePivot('role', 'conductor')->exists();
+    }
+
+    // Método para verificar si es ayudante
+    public function isAssistant()
+    {
+        return $this->employeeGroups()->wherePivot('role', 'ayudante')->exists();
+    }
+
+    // Obtener grupos donde es conductor
+    public function driverGroups()
+    {
+        return $this->employeeGroups()->wherePivot('role', 'conductor');
+    }
+
+    // Obtener grupos donde es ayudante
+    public function assistantGroups()
+    {
+        return $this->employeeGroups()->wherePivot('role', 'ayudante');
+    }
+
+    /**
+     * Validar si tiene contrato activo para una fecha
+     */
+    public function isActiveContract($date = null)
+    {
+        $date = $date ? Carbon::parse($date) : now();
+
+        return $this->contracts()
+            ->where('is_active', true)
+            ->where('start_date', '<=', $date)
+            ->where(function ($query) use ($date) {
+                $query->whereNull('end_date')
+                    ->orWhere('end_date', '>=', $date);
+            })
+            ->exists();
+    }
+
+    /**
+     * Validar si tiene vacaciones en una fecha específica
+     */
+    public function hasVacation($date)
+    {
+        $date = Carbon::parse($date);
+
+        return $this->vacations()
+            ->where('start_date', '<=', $date)
+            ->where('end_date', '>=', $date)
+            ->where('status', 'approved')
+            ->exists();
+    }
+
+    /**
+     * Validación completa para programación
+     */
+    public function canBeScheduled($date)
+    {
+        $date = Carbon::parse($date);
+
+        // 1. Validar contrato activo
+        if (!$this->isActiveContract($date)) {
+            return [
+                'can_be_scheduled' => false,
+                'error' => 'No tiene contrato activo para la fecha ' . $date->format('d/m/Y'),
+                'error_type' => 'contract'
+            ];
+        }
+
+        // 2. Validar vacaciones
+        if ($this->hasVacation($date)) {
+            return [
+                'can_be_scheduled' => false,
+                'error' => 'Tiene vacaciones aprobadas para la fecha ' . $date->format('d/m/Y'),
+                'error_type' => 'vacation'
+            ];
+        }
+
+        return [
+            'can_be_scheduled' => true,
+            'error' => null,
+            'error_type' => null
+        ];
+    }
+
+    /**
+     * Obtener el contrato activo actual
+     */
+    public function getCurrentContractAttribute()
+    {
+        return $this->contracts()
+            ->where('is_active', true)
+            ->where('start_date', '<=', now())
+            ->where(function ($query) {
+                $query->whereNull('end_date')
+                    ->orWhere('end_date', '>=', now());
+            })
+            ->first();
+    }
+
+    /**
+     * Obtener vacaciones futuras/aprobadas
+     */
+    public function getUpcomingApprovedVacations()
+    {
+        return $this->vacations()
+            ->where('status', 'approved')
+            ->where('end_date', '>=', now())
+            ->orderBy('start_date')
+            ->get();
+    }
+
+    /**
+     * Scope para empleados disponibles en una fecha
+     */
+    public function scopeAvailableForDate($query, $date)
+    {
+        $date = Carbon::parse($date);
+
+        return $query->whereHas('contracts', function ($q) use ($date) {
+            $q->where('is_active', true)
+                ->where('start_date', '<=', $date)
+                ->where(function ($q2) use ($date) {
+                    $q2->whereNull('end_date')
+                        ->orWhere('end_date', '>=', $date);
+                });
+        })
+            ->whereDoesntHave('vacations', function ($q) use ($date) {
+                $q->where('start_date', '<=', $date)
+                    ->where('end_date', '>=', $date)
+                    ->where('status', 'approved');
+            });
+    }
 }

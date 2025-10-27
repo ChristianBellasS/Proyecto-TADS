@@ -10,7 +10,7 @@ class Vehicle extends Model
     use HasFactory;
 
     protected $table = 'vehicles';
-    
+
     protected $fillable = [
         'name',
         'code',
@@ -91,9 +91,22 @@ class Vehicle extends Model
         return $this->vehicleImages()->exists();
     }
 
-    
+
     public function employeeGroups()
     {
         return $this->hasMany(EmployeeGroup::class);
+    }
+
+    // para programación
+
+    public function zones()
+    {
+        return $this->belongsToMany(Zone::class, 'zonevehicle', 'vehicle_id', 'zone_id')
+            ->withTimestamps();
+    }
+
+    public function schedulings()
+    {
+        return $this->hasMany(Scheduling::class);
     }
 }

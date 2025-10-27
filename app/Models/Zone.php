@@ -36,4 +36,26 @@ class Zone extends Model
     {
         return $this->hasMany(EmployeeGroup::class);
     }
+
+    // para programación
+
+    public function vehicles()
+    {
+        return $this->belongsToMany(Vehicle::class, 'zone_vehicle', 'zone_id', 'vehicle_id');
+    }
+
+    public function shifts()
+    {
+        return $this->belongsToMany(Shift::class, 'zone_shift', 'zone_id', 'shift_id');
+    }
+
+    // Método para precargar datos
+    public function getProgrammingData()
+    {
+        return [
+            'vehicles' => $this->vehicles()->where('status', true)->get(),
+            'shifts' => $this->shifts,
+            'groups' => $this->employeeGroups()->where('status', true)->get()
+        ];
+    }
 }

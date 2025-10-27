@@ -10,7 +10,7 @@ class EmployeeGroup extends Model
     use HasFactory;
 
     protected $table = 'employeegroups';
-    
+
     protected $guarded = [];
 
     public function zone()
@@ -69,5 +69,27 @@ class EmployeeGroup extends Model
             }
         }
         return collect($assistants);
+    }
+
+    public function configEmployees()
+    {
+        return $this->belongsToMany(Employee::class, 'configgroups', 'employeegroup_id', 'employee_id')
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    public function getConfigDriverAttribute()
+    {
+        return $this->configEmployees()->wherePivot('role', 'conductor')->first();
+    }
+
+    public function getConfigAssistantsAttribute()
+    {
+        return $this->configEmployees()->wherePivot('role', 'ayudante')->get();
+    }
+
+    public function getConfigEmployeesCountAttribute()
+    {
+        return $this->configEmployees()->count();
     }
 }

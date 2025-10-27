@@ -461,6 +461,11 @@ return [
                     'url' => 'admin/employeegroups',
                     'icon' => 'fas fa-users',
                 ],
+                [
+                    'text'=>'Programación',
+                    'url'=>'admin/scheduling',
+                    'icon'=>'fas fa-fw fa-clock',
+                ],
             ],
         ],
     ],

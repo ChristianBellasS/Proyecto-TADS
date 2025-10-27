@@ -77,7 +77,7 @@ class EmployeeGroupController extends Controller
             
             return view('admin.employeegroups.create', compact('zones', 'shifts', 'vehicles', 'employees'));
         } catch (\Exception $e) {
-            \Log::error('Error en EmployeeGroupController@create: ' . $e->getMessage());
+            // \Log::error('Error en EmployeeGroupController@create: ' . $e->getMessage());
             abort(500, 'Error al cargar el formulario: ' . $e->getMessage());
         }
     }
@@ -131,7 +131,7 @@ class EmployeeGroupController extends Controller
 
             return response()->json(['message' => 'Grupo de personal creado exitosamente.'], 200);
         } catch (\Throwable $th) {
-            \Log::error('Error en EmployeeGroupController@store: ' . $th->getMessage());
+            // \Log::error('Error en EmployeeGroupController@store: ' . $th->getMessage());
             return response()->json(['message' => 'Error al crear el grupo.', 'error' => $th->getMessage()], 500);
         }
     }
@@ -160,7 +160,7 @@ class EmployeeGroupController extends Controller
             
             return view('admin.employeegroups.edit', compact('group', 'zones', 'shifts', 'vehicles', 'employees'));
         } catch (\Exception $e) {
-            \Log::error('Error en EmployeeGroupController@edit: ' . $e->getMessage());
+            // \Log::error('Error en EmployeeGroupController@edit: ' . $e->getMessage());
             abort(404, 'Grupo no encontrado');
         }
     }
@@ -201,7 +201,7 @@ class EmployeeGroupController extends Controller
 
             return response()->json(['message' => 'Grupo actualizado exitosamente.'], 200);
         } catch (\Throwable $th) {
-            \Log::error('Error en EmployeeGroupController@update: ' . $th->getMessage());
+            // \Log::error('Error en EmployeeGroupController@update: ' . $th->getMessage());
             return response()->json(['message' => 'Error al actualizar el grupo.', 'error' => $th->getMessage()], 500);
         }
     }
@@ -217,7 +217,7 @@ class EmployeeGroupController extends Controller
 
             return response()->json(['message' => 'Grupo eliminado exitosamente.'], 200);
         } catch (\Throwable $th) {
-            \Log::error('Error en EmployeeGroupController@destroy: ' . $th->getMessage());
+            // \Log::error('Error en EmployeeGroupController@destroy: ' . $th->getMessage());
             return response()->json(['message' => 'Error al eliminar el grupo.', 'error' => $th->getMessage()], 500);
         }
     }
@@ -263,7 +263,7 @@ class EmployeeGroupController extends Controller
 
             return response()->json($employees);
         } catch (\Exception $e) {
-            \Log::error('Error en EmployeeGroupController@searchEmployees: ' . $e->getMessage());
+            // \Log::error('Error en EmployeeGroupController@searchEmployees: ' . $e->getMessage());
             return response()->json([], 500);
         }
     }

@@ -17,6 +17,8 @@ use App\Http\Controllers\admin\EmployeeTypeController;
 use App\Http\Controllers\admin\EmployeeController;
 use App\Http\Controllers\admin\ContractController;
 use App\Http\Controllers\admin\EmployeeGroupController;
+use App\Http\Controllers\admin\SchedulingController;
+
 
 // use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\admin\AttendanceController;
@@ -139,3 +141,25 @@ Route::get('contracts/check-last-temporal', [ContractController::class, 'checkLa
 
 // Rutas para buscar empleados en el modulo de turnos
 Route::get('admin/employeegroups/search/employees', [EmployeeGroupController::class, 'searchEmployees'])->name('admin.employeegroups.search.employees');
+
+// PROGRAMACIÓN
+
+Route::get('/scheduling', [SchedulingController::class, 'index'])->name('admin.scheduling.index');
+Route::get('/scheduling/create', [SchedulingController::class, 'create'])->name('admin.scheduling.create');
+Route::post('/scheduling/store', [SchedulingController::class, 'store'])->name('admin.scheduling.store');
+
+// Rutas para búsqueda de grupos de personal
+Route::get('/scheduling/search-employee-groups', [SchedulingController::class, 'searchEmployeeGroups'])
+    ->name('admin.scheduling.search-employee-groups');
+
+Route::post('/admin/scheduling/check-availability', [SchedulingController::class, 'checkAvailability'])->name('admin.scheduling.check-availability');
+Route::get('/admin/scheduling/group-data/{groupId}', [SchedulingController::class, 'getGroupData']);
+
+// Ruta para obtener datos de un grupo específico
+Route::get('/scheduling/group-data/{groupId}', [SchedulingController::class, 'getGroupData'])
+    ->name('admin.scheduling.group-data');
+
+// Otras rutas de scheduling
+Route::get('/scheduling/zone-data/{zone}', [SchedulingController::class, 'getZoneData'])->name('admin.scheduling.zone-data');
+Route::post('/scheduling/check-availability', [SchedulingController::class, 'checkAvailability'])->name('admin.scheduling.check-availability');
+Route::post('/scheduling/bulk-update', [SchedulingController::class, 'bulkUpdate'])->name('admin.scheduling.bulk-update');
