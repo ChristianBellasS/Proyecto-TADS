@@ -148,6 +148,12 @@ Route::get('/scheduling', [SchedulingController::class, 'index'])->name('admin.s
 Route::get('/scheduling/create', [SchedulingController::class, 'create'])->name('admin.scheduling.create');
 Route::post('/scheduling/store', [SchedulingController::class, 'store'])->name('admin.scheduling.store');
 
+Route::get('/scheduling/daily-data', [SchedulingController::class, 'dailyData'])
+    ->name('admin.scheduling.daily-data');
+
+Route::get('/scheduling/{id}/edit', [SchedulingController::class, 'edit'])
+    ->name('admin.scheduling.edit');
+
 // Rutas para búsqueda de grupos de personal
 Route::get('/scheduling/search-employee-groups', [SchedulingController::class, 'searchEmployeeGroups'])
     ->name('admin.scheduling.search-employee-groups');

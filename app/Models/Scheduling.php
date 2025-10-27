@@ -30,35 +30,36 @@ class Scheduling extends Model
         return $this->belongsTo(Vehicle::class);
     }
 
-    public function groupDetails()
-    {
-        return $this->hasMany(GroupDetail::class);
-    }
+    // public function groupDetails()
+    // {
+    //     return $this->hasMany(GroupDetail::class);
+    // }
 
     public function employees()
     {
-        return $this->belongsToMany(Employee::class, 'groupdetails', 'scheduling_id', 'employee_id');
+        return $this->belongsToMany(Employee::class, 'employee_groups', 'scheduling_id', 'employee_id');
     }
+
 
     // Métodos de validación
     public function hasEmployeeOnVacation()
     {
-        return $this->employees()->whereHas('vacations', function($query) {
+        return $this->employees()->whereHas('vacations', function ($query) {
             $query->where('status', 'Approved')
-                  ->whereDate('start_date', '<=', $this->date)
-                  ->whereDate('end_date', '>=', $this->date);
+                ->whereDate('start_date', '<=', $this->date)
+                ->whereDate('end_date', '>=', $this->date);
         })->exists();
     }
 
     public function hasEmployeeWithoutContract()
     {
-        return $this->employees()->whereDoesntHave('contracts', function($query) {
+        return $this->employees()->whereDoesntHave('contracts', function ($query) {
             $query->where('is_active', true)
-                  ->whereDate('start_date', '<=', $this->date)
-                  ->where(function($q) {
-                      $q->whereNull('end_date')
+                ->whereDate('start_date', '<=', $this->date)
+                ->where(function ($q) {
+                    $q->whereNull('end_date')
                         ->orWhereDate('end_date', '>=', $this->date);
-                  });
+                });
         })->exists();
     }
 }

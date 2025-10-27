@@ -1,4 +1,4 @@
-{!! Form::open(['route' => 'admin.scheduling.store', 'method' => 'POST', 'id' => 'schedulingForm']) !!}
+{{-- {!! Form::open(['route' => 'admin.scheduling.store', 'method' => 'POST', 'id' => 'schedulingForm']) !!} --}}
 
 <!-- Campos hidden -->
 <input type="hidden" id="hidden_zone_id" name="zone_id">
@@ -114,7 +114,7 @@
     ]) !!} --}}
 </div>
 
-{!! Form::close() !!}
+{{-- {!! Form::close() !!} --}}
 
 @section('js')
     <script>

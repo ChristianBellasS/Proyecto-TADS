@@ -4,7 +4,7 @@
 
 @section('content_header')
     <div class="d-flex justify-content-between align-items-center">
-        <h1>Editar Programación</h1>
+        <h1 class="mb-0">Editar Programación</h1>
         <a href="{{ url()->previous() }}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Volver
         </a>
@@ -13,9 +13,20 @@
 
 @section('content')
     <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Actualizar datos de la programación</h3>
+        </div>
+
         <div class="card-body">
-            {!! Form::model($scheduling, ['route' => ['admin.scheduling.update', $scheduling->id], 'method' => 'PUT']) !!}
-                @include('admin.scheduling.form')
+            {!! Form::model($scheduling, [
+                'route' => ['admin.scheduling.update', $scheduling->id],
+                'method' => 'PUT',
+                'id' => 'schedulingForm',
+            ]) !!}
+                
+                {{-- Contenido del formulario --}}
+                @include('admin.scheduling.templates.form')
+            
             {!! Form::close() !!}
         </div>
     </div>

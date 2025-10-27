@@ -38,31 +38,29 @@ class SchedulingController extends Controller
             $query->whereBetween('date', [$request->start_date, $request->end_date]);
         }
 
-        $schedulings = $query->get();
+        $schedulings = $query->get() ?: collect();
 
-        // Asegurar que siempre tenemos una colección
-        $schedulings = $schedulings ?: collect();
+        try {
+            $data = $schedulings->map(function ($scheduling) {
+                return [
+                    'id' => $scheduling->id,
+                    'date' => $scheduling->date ? $scheduling->date->format('Y-m-d') : 'N/A',
+                    'status' => $scheduling->status ?? 'N/A',
+                    'zone' => optional(optional($scheduling->group)->zone)->name ?? 'N/A',
+                    'shift' => $scheduling->shift->name ?? 'N/A',
+                    'vehicle' => $scheduling->vehicle->name ?? 'N/A',
+                    'group' => $scheduling->group->name ?? 'N/A',
+                ];
+            });
 
-        $data = $schedulings->map(function ($scheduling) {
-            return [
-                'id' => $scheduling->id,
-                'date' => $scheduling->date ? $scheduling->date->format('Y-m-d') : 'N/A',
-                'status' => $scheduling->status ?? 'N/A',
-                'zone' => $scheduling->group->zone->name ?? 'N/A',
-                'shift' => $scheduling->shift->name ?? 'N/A',
-                'vehicle' => $scheduling->vehicle->name ?? 'N/A',
-                'group' => $scheduling->group->name ?? 'N/A',
-            ];
-        });
-
-        return response()->json([
-            'draw' => intval($request->input('draw')),
-            'recordsTotal' => $data->count(),
-            'recordsFiltered' => $data->count(),
-            'data' => $data
-        ]);
+            return response()->json($data);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error' => true,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
-
     /**
      * Lista de programaciones para el CRUD (admin/scheduling)
      */
@@ -452,6 +450,19 @@ class SchedulingController extends Controller
             ]);
         }
         return redirect()->route('admin.schedulings.index')->with('success', 'Programación creada exitosamente.');
+    }
+
+    public function edit($id)
+    {
+        // Buscar la programación
+        $scheduling = Scheduling::with(['shift', 'vehicle', 'employees'])->findOrFail($id);
+
+        // Obtener los catálogos necesarios (si los usas en el form)
+        $zones = Zone::where('status', true)->get();
+        $vehicles = Vehicle::where('status', 'active')->get();
+        $shifts = Shift::all();
+
+        return view('admin.scheduling.edit', compact('scheduling', 'zones', 'vehicles', 'shifts'));
     }
 
     /**

@@ -15,8 +15,11 @@
         <div class="card-header">
             <h3 class="card-title">Registrar programación</h3>
         </div>
+
         <div class="card-body">
-            @include('admin.scheduling.templates.form')
+            {!! Form::open(['route' => 'admin.scheduling.store', 'method' => 'POST', 'id' => 'schedulingForm']) !!}
+                @include('admin.scheduling.templates.form')
+            {!! Form::close() !!}
         </div>
     </div>
 @stop

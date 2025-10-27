@@ -117,7 +117,7 @@
                 "processing": true,
                 "serverSide": false,
                 "ajax": {
-                    "url": "{{ route('admin.scheduling.index') }}",
+                    "url": "{{ route('admin.scheduling.daily-data') }}",
                     "type": "GET",
                     "data": function(d) {
                         d.start_date = $('#start_date').val();
@@ -192,37 +192,28 @@
                         "render": function(data, type, row) {
                             let buttons = '';
 
-                            // Botón iniciar recorrido (solo si está programado)
-                            if (row.status === 'programado') {
-                                buttons +=
-                                    '<button class="btn btn-sm btn-success btn-start-route mr-1" data-id="' +
-                                    row.id + '" title="Iniciar Recorrido">' +
-                                    '<i class="fas fa-play"></i>' +
-                                    '</button>';
-                            } else {
-                                buttons +=
-                                    '<button class="btn btn-sm btn-secondary mr-1" disabled title="No disponible"><i class="fas fa-play"></i></button>';
-                            }
-
-                            // Botón editar
+                            // Botón Amarillo (Reasignar/Reprogramar) - Icono de Doble Flecha Circular
                             buttons +=
-                                '<button class="btn btn-sm btn-primary btnEditar mr-1" data-id="' +
-                                row.id + '" title="Editar">' +
-                                '<i class="fas fa-edit"></i>' +
+                                '<button class="btn btn-sm btn-warning btn-reassign mr-1" data-id="' +
+                                row.id + '" title="Reasignar/Reprogramar" style="color: white;">' +
+                                '<i class="fas fa-redo-alt"></i>' +
                                 '</button>';
 
-                            // Botón eliminar
+                            // Botón Azul Turquesa (Ver Grupo/Personal) - Icono de Grupo de Personas
                             buttons +=
-                                '<form class="frmDelete d-inline" action="/admin/scheduling/' +
-                                row.id + '" method="POST">' +
-                                '@csrf' +
-                                '@method('DELETE')' +
-                                '<button type="submit" class="btn btn-sm btn-danger" title="Eliminar">' +
-                                '<i class="fas fa-trash"></i>' +
-                                '</button>' +
-                                '</form>';
+                                '<button class="btn btn-sm btn-info btn-view-group mr-1" data-id="' +
+                                row.id + '" title="Ver Grupo/Personal" style="color: white;">' +
+                                '<i class="fas fa-users"></i>' +
+                                '</button>';
 
-                            return buttons;
+                            // Botón Rojo (Eliminar/Cancelar) - Icono de Círculo Tachado
+                            buttons +=
+                                '<button class="btn btn-sm btn-danger btn-delete mr-1" data-id="' +
+                                row.id + '" title="Eliminar/Cancelar" style="color: white;">' +
+                                '<i class="fas fa-ban"></i>' +
+                                '</button>';
+
+                            return '<div class="btn-group">' + buttons + '</div>';
                         }
                     }
                 ],
@@ -388,7 +379,7 @@
                 if (driver && driver.id) {
                     $('#driver_select').append(
                         new Option(
-                            `${driver.names} - ${driver.dni} (Conductor)`, // Quitamos position que no existe
+                            `${driver.names} - ${driver.dni} (Conductor)`,
                             driver.id,
                             true,
                             true
@@ -461,23 +452,27 @@
             }
 
             // Eliminar programación con confirmación de SweetAlert
-            $(document).on('click', '.frmDelete', function(event) {
-                var form = $(this);
+            $(document).on('click', '.btn-delete', function(event) {
                 event.preventDefault();
+                var id = $(this).data('id');
+
                 Swal.fire({
                     title: '¿Estás seguro?',
-                    text: "¡No podrás revertir esto!",
+                    text: "¡Esta acción no se puede deshacer!",
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'Sí, eliminarlo!'
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar'
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $.ajax({
-                            url: form.attr('action'),
-                            type: 'POST',
-                            data: form.serialize(),
+                            url: "{{ url('admin/scheduling') }}/" + id,
+                            type: 'DELETE',
+                            data: {
+                                _token: '{{ csrf_token() }}'
+                            },
                             success: function(response) {
                                 table.ajax.reload();
                                 Swal.fire(
@@ -498,6 +493,42 @@
                             }
                         });
                     }
+                });
+            });
+
+            // Función para reasignar/reprogramar (Botón Amarillo)
+            $(document).on('click', '.btn-reassign', function() {
+                var id = $(this).data('id');
+
+                Swal.fire({
+                    title: '¿Reasignar Programación?',
+                    text: "¿Quieres reasignar el vehículo o reprogramar esta programación?",
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ffc107',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Sí, reasignar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Aquí iría la lógica para reasignar/reprogramar
+                        Swal.fire({
+                            title: "Función en desarrollo",
+                            text: "La funcionalidad de reasignar estará disponible pronto",
+                            icon: "info"
+                        });
+                    }
+                });
+            });
+
+            $(document).on('click', '.btn-view-group', function() {
+                var id = $(this).data('id');
+
+                Swal.fire({
+                    title: "Detalles del Grupo",
+                    text: "Mostrando información del personal asignado a esta programación",
+                    icon: "info",
+                    confirmButtonText: "Cerrar"
                 });
             });
 
@@ -544,69 +575,6 @@
                                 icon: "error"
                             });
                         }
-                    }
-                });
-            });
-
-            // Abrir modal para editar una programación existente
-            $(document).on('click', '.btnEditar', function() {
-                var id = $(this).data('id');
-                $.ajax({
-                    url: "{{ url('admin/scheduling') }}/" + id + "/edit",
-                    type: 'GET',
-                    dataType: 'html',
-                    success: function(response) {
-                        $('#modalProgramacionBody').html(response);
-                        $('#modalProgramacionLabel').html("Editar Programación");
-                        $('#modalProgramacion').modal('show');
-                    },
-                    error: function(xhr) {
-                        Swal.fire('Error', 'No se pudo cargar el formulario de edición',
-                            'error');
-                    }
-                });
-            });
-
-            // Iniciar recorrido
-            $(document).on('click', '.btn-start-route', function() {
-                var schedulingId = $(this).data('id');
-
-                Swal.fire({
-                    title: '¿Iniciar Recorrido?',
-                    text: "¿Estás seguro de que quieres iniciar el recorrido?",
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'Sí, iniciar',
-                    cancelButtonText: 'Cancelar'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: "{{ url('admin/scheduling') }}/" + schedulingId +
-                                "/start-route",
-                            type: 'POST',
-                            data: {
-                                _token: '{{ csrf_token() }}'
-                            },
-                            success: function(response) {
-                                table.ajax.reload();
-                                Swal.fire({
-                                    title: "¡Éxito!",
-                                    text: response.message,
-                                    icon: "success"
-                                });
-                            },
-                            error: function(xhr) {
-                                var error = xhr.responseJSON;
-                                Swal.fire({
-                                    title: "Error!",
-                                    text: error.message ||
-                                        'Error al iniciar el recorrido',
-                                    icon: "error"
-                                });
-                            }
-                        });
                     }
                 });
             });
