@@ -9,7 +9,7 @@ class Zone extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'description', 'district_id', 'status'];
+    protected $fillable = ['name', 'description', 'district_id', 'status', 'average_waste'];
 
     public function district()
     {
