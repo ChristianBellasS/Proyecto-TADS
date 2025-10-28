@@ -104,7 +104,8 @@ Route::get('vehicles/get-models/{brandId}', [VehicleController::class, 'getModel
 // -------------------
 Route::resource('attendances', AttendanceController::class)->names('admin.attendances');
 Route::get('/admin/employees/search', [AttendanceController::class, 'searchEmployees'])->name('admin.employees.search');
-
+Route::get('/admin/attendances/day-records', [AttendanceController::class, 'getDayRecords'])->name('admin.attendances.get-day-records');
+Route::get('/admin/employees/{id}', [EmployeeController::class, 'show'])->name('admin.employees.show');
 
 // Gestión de Vacaciones
 Route::resource('vacations', VacationController::class)->names('admin.vacations');

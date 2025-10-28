@@ -246,14 +246,6 @@
                 showFieldWarning($('select[name="type"]'), 'El tipo es requerido');
                 isValid = false;
             }
-
-            // Validar período
-            const period = $('select[name="period"]').val();
-            if (!period) {
-                showFieldWarning($('select[name="period"]'), 'El período es requerido');
-                isValid = false;
-            }
-
             // Validar estado
             const status = $('select[name="status"]').val();
             if (!status) {
@@ -296,9 +288,6 @@
             if (errors.type) {
                 showFieldWarning($('select[name="type"]'), errors.type[0]);
             }
-            if (errors.period) {
-                showFieldWarning($('select[name="period"]'), errors.period[0]);
-            }
             if (errors.status) {
                 showFieldWarning($('select[name="status"]'), errors.status[0]);
             }
@@ -323,12 +312,6 @@
         });
 
         $('select[name="type"]').on('change', function() {
-            if ($(this).val()) {
-                hideFieldWarning($(this));
-            }
-        });
-
-        $('select[name="period"]').on('change', function() {
             if ($(this).val()) {
                 hideFieldWarning($(this));
             }

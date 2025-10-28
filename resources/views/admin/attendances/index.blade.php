@@ -76,7 +76,6 @@
                             <th>EMPLEADO</th>
                             <th>FECHA Y HORA</th>
                             <th>TIPO</th>
-                            <th>PERÍODO</th>
                             <th>ESTADO</th>
                             <th>NOTAS</th>
                             <th width="10px"></th>
@@ -197,6 +196,47 @@
             border-radius: 8px !important;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1) !important;
         }
+
+        select[readonly] {
+            background-color: #f8f9fa !important;
+            color: #6c757d !important;
+            cursor: not-allowed !important;
+            border-color: #dee2e6 !important;
+            pointer-events: none;
+        }
+
+        .bg-light {
+            background-color: #f8f9fa !important;
+        }
+
+        select:disabled {
+            background-color: #f8f9fa !important;
+            color: #6c757d !important;
+            cursor: not-allowed !important;
+            border-color: #dee2e6 !important;
+        }
+
+        /* Estilos para el mensaje de ayuda */
+        #type_help .fas {
+            margin-right: 5px;
+        }
+
+        /* Colores para mensajes de estado */
+        .bg-success {
+            background-color: #28a745 !important;
+        }
+
+        .bg-info {
+            background-color: #17a2b8 !important;
+        }
+
+        .bg-warning {
+            background-color: #ffc107 !important;
+        }
+
+        .bg-danger {
+            background-color: #dc3545 !important;
+        }
     </style>
 @stop
 
@@ -246,28 +286,6 @@
                         }
                     },
                     {
-                        "data": "period",
-                        "name": "period",
-                        "render": function(data) {
-                            var badgeClass = 'bg-primary';
-                            var displayText = 'Mañana';
-
-                            if (data == 2) {
-                                displayText = 'Tarde';
-                                badgeClass = 'bg-info';
-                            } else if (data == 3) {
-                                displayText = 'Noche';
-                                badgeClass = 'bg-dark';
-                            } else if (data == 4) {
-                                displayText = 'Día completo';
-                                badgeClass = 'bg-success';
-                            }
-
-                            return '<span class="badge ' + badgeClass + '">' + displayText +
-                                '</span>';
-                        }
-                    },
-                    {
                         "data": "status",
                         "name": "status",
                         "render": function(data) {
@@ -275,14 +293,8 @@
                             var statusText = 'Presente';
 
                             if (data == 2) {
-                                statusText = 'Ausente';
-                                badgeClass = 'bg-danger';
-                            } else if (data == 3) {
                                 statusText = 'Tarde';
                                 badgeClass = 'bg-warning';
-                            } else if (data == 4) {
-                                statusText = 'Permiso';
-                                badgeClass = 'bg-info';
                             }
 
                             return '<span class="badge ' + badgeClass + '">' + statusText +
@@ -439,7 +451,6 @@
                 });
             });
 
-            // Función para inicializar Select2
             function initSelect2() {
                 $('#employee_select').select2({
                     width: '100%',
@@ -469,17 +480,215 @@
                                             ''),
                                         dni: employee.dni,
                                         email: employee.email,
-                                        phone: employee.telefono || 'No registrado'
+                                        phone: employee.telefono
                                     };
                                 })
                             };
                         },
                         cache: true
                     },
-                    minimumInputLength: 2,
-                    templateResult: formatEmployee,
-                    templateSelection: formatEmployeeSelection
+                    minimumInputLength: 2
                 });
+
+                // INICIALIZAR LA LÓGICA DE BLOQUEO DESPUÉS DE CARGAR EL FORMULARIO
+                initializeAttendanceForm();
+            }
+
+            // Función para inicializar la lógica de bloqueo automático
+            function initializeAttendanceForm() {
+                console.log('Inicializando lógica de bloqueo...');
+
+                // Inicializar Select2 para empleados (si no está inicializado)
+                const employeeSelect = $('#employee_select');
+
+                // Evento cuando se selecciona un empleado
+                employeeSelect.on('select2:select', function(e) {
+                    console.log('Empleado seleccionado:', e.params.data.id);
+                    var data = e.params.data;
+                    showEmployeeInfo(data);
+
+                    // Cargar registros del día actual
+                    const date = $('#attendance_date_input').val();
+                    loadTodayRecords(data.id, date);
+                });
+
+                // Cuando se limpia la selección
+                employeeSelect.on('select2:clear', function(e) {
+                    console.log('Empleado deseleccionado');
+                    hideEmployeeInfo();
+                    resetForm();
+                });
+
+                // Evento cuando cambia la fecha
+                $('#attendance_date_input').on('change', function() {
+                    const selectedEmployee = $('#employee_select').val();
+                    console.log('Fecha cambiada:', $(this).val());
+                    if (selectedEmployee) {
+                        loadTodayRecords(selectedEmployee, $(this).val());
+                    } else {
+                        resetForm();
+                    }
+                });
+
+                // Si hay un empleado preseleccionado, cargar sus registros
+                const presetEmployeeId = $('#employee_select').find('option[selected]').val();
+                if (presetEmployeeId) {
+                    console.log('Cargando empleado preseleccionado:', presetEmployeeId);
+                    const date = $('#attendance_date_input').val();
+                    loadTodayRecords(presetEmployeeId, date);
+                }
+            }
+
+            // Función para cargar registros del día
+            function loadTodayRecords(employeeId, date) {
+                if (!employeeId || !date) {
+                    console.log('No hay empleado o fecha para cargar registros');
+                    resetForm();
+                    return;
+                }
+
+                $.ajax({
+                    url: "{{ route('admin.attendances.get-day-records') }}",
+                    type: "GET",
+                    data: {
+                        employee_id: employeeId,
+                        date: date
+                    },
+                    success: function(response) {
+                        console.log('Registros recibidos:', response.records);
+                        displayTodayRecords(response.records);
+                        determineFormStatus(response.records);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error al cargar registros del día:', error);
+                        resetForm();
+                    }
+                });
+            }
+
+            // Función para mostrar registros del día
+            function displayTodayRecords(records) {
+                const attendanceInfo = $('#attendance_info');
+                const todayRecords = $('#today_records');
+
+                if (records && records.length > 0) {
+                    let html = '<ul class="list-unstyled mb-0">';
+                    records.forEach(record => {
+                        const time = record.time;
+                        const type = record.type === 'ENTRADA' ?
+                            '<span class="badge bg-success">Entrada</span>' :
+                            '<span class="badge bg-info">Salida</span>';
+                        const status = record.status == 1 ?
+                            '<span class="badge bg-primary">Presente</span>' :
+                            '<span class="badge bg-warning">Tarde</span>';
+                        html += `<li class="mb-1">${type} ${status} - ${time}</li>`;
+                    });
+                    html += '</ul>';
+                    todayRecords.html(html);
+                    attendanceInfo.show();
+                } else {
+                    todayRecords.html('<p class="text-muted mb-0">No hay registros para este día.</p>');
+                    attendanceInfo.show();
+                }
+            }
+
+            // Función para determinar el estado del formulario - CORREGIDA
+            function determineFormStatus(records) {
+                console.log('🔍 Determinando estado del formulario...');
+
+                const hasEntry = records.some(r => r.type === 'ENTRADA');
+                const hasExit = records.some(r => r.type === 'SALIDA');
+
+                if (!hasEntry && !hasExit) {
+                    // CASO 1: Sin registros → ENTRADA (BLOQUEADA)
+                    setFormStatus('ENTRADA', true, 'Primer registro del día - debe ser ENTRADA', 'warning');
+                } else if (hasEntry && !hasExit) {
+                    // CASO 2: Tiene entrada pero NO salida → SALIDA (BLOQUEADA)
+                    setFormStatus('SALIDA', true, 'Tiene entrada registrada - debe ser SALIDA', 'warning');
+                } else if (hasEntry && hasExit) {
+                    // CASO 3: Tiene entrada Y salida → ENTRADA (EDITABLE)
+                    setFormStatus('ENTRADA', false, 'Ya completó el ciclo - puede elegir nuevo tipo', 'success');
+                } else if (!hasEntry && hasExit) {
+                    // CASO 4: Tiene salida pero NO entrada (caso raro) → ENTRADA (EDITABLE)
+                    setFormStatus('ENTRADA', false, 'Caso irregular - puede elegir tipo', 'info');
+                }
+            }
+
+            // Función para establecer el estado del formulario - CORREGIDA
+            function setFormStatus(suggestedType, isTypeLocked, message, messageType) {
+                const typeSelect = $('#type_select');
+                const helpText = $('#type_help');
+                const suggestionDiv = $('#suggestion_info');
+                const suggestionSpan = $('#suggestion_text');
+
+                console.log('🎯 Aplicando estado - Tipo:', suggestedType, 'Tipo Bloqueado:', isTypeLocked);
+
+                typeSelect.val(suggestedType);
+
+                if (isTypeLocked) {
+                    typeSelect.prop('disabled', false);
+                    typeSelect.prop('readonly', true);
+                    typeSelect.addClass('bg-light');
+                } else {
+                    typeSelect.prop('readonly', false);
+                    typeSelect.removeClass('bg-light');
+                }
+
+                // Actualizar mensaje de ayuda
+                if (isTypeLocked) {
+                    helpText.html(`<i class="fas fa-lock text-${messageType}"></i> ${message}`);
+                    helpText.removeClass('text-success text-info').addClass(`text-${messageType}`);
+                } else {
+                    helpText.html(`<i class="fas fa-unlock text-${messageType}"></i> ${message}`);
+                    helpText.removeClass('text-warning text-danger').addClass(`text-${messageType}`);
+                }
+
+                // Mostrar sugerencia
+                if (message) {
+                    suggestionSpan.text(message);
+                    suggestionDiv.removeClass('bg-light bg-warning bg-danger bg-success bg-info')
+                        .addClass(`bg-${messageType}`).show();
+
+                    if (messageType === 'warning' || messageType === 'danger') {
+                        suggestionDiv.addClass('text-white');
+                    } else {
+                        suggestionDiv.removeClass('text-white');
+                    }
+                } else {
+                    suggestionDiv.hide();
+                }
+            }
+
+            // Función para resetear el formulario - CORREGIDA
+            function resetForm() {
+                console.log('🔄 Reseteando formulario');
+                $('#type_select').val('ENTRADA');
+                $('#type_select').prop('readonly', false);
+                $('#type_select').removeClass('bg-light');
+                $('#type_help').html('Tipo de registro');
+                $('#type_help').removeClass('text-warning text-danger text-success text-info');
+                $('#attendance_info').hide();
+                $('#suggestion_info').hide();
+                $('#complete_block_message').addClass('d-none');
+            }
+
+            // Mostrar información del empleado
+            function showEmployeeInfo(employeeData) {
+                $('#info_fullname').text(employeeData.full_name);
+                $('#info_dni').text(employeeData.dni);
+                $('#info_email').text(employeeData.email || 'No registrado');
+                $('#info_phone').text(employeeData.phone || 'No registrado');
+                $('#employee_info').removeClass('d-none');
+            }
+
+            // Ocultar información del empleado
+            function hideEmployeeInfo() {
+                $('#employee_info').addClass('d-none');
+                $('#info_fullname').text('-');
+                $('#info_dni').text('-');
+                $('#info_email').text('-');
+                $('#info_phone').text('-');
+                $('#attendance_info').hide();
             }
 
             // Formatear cómo se muestra el empleado en los resultados

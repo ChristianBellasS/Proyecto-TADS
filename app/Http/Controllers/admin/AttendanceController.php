@@ -49,9 +49,6 @@ class AttendanceController extends Controller
                 ->addColumn('type', function ($attendance) {
                     return $attendance->type;
                 })
-                ->addColumn('period', function ($attendance) {
-                    return $attendance->period;
-                })
                 ->addColumn('status', function ($attendance) {
                     return $attendance->status;
                 })
@@ -68,9 +65,46 @@ class AttendanceController extends Controller
         return view('admin.attendances.index');
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        return view('admin.attendances.create');
+        $employeeId = $request->get('employee_id');
+        $attendanceDate = $request->get('attendance_date', now()->format('Y-m-d'));
+
+        $suggestedType = 'ENTRADA';
+        $isTypeLocked = false;
+        $lastAttendance = null;
+
+        if ($employeeId) {
+            // Buscar registros del empleado para la fecha seleccionada
+            $existingAttendances = Attendance::where('employee_id', $employeeId)
+                ->whereDate('attendance_date', $attendanceDate)
+                ->orderBy('attendance_date', 'asc')
+                ->get();
+
+            $hasEntry = $existingAttendances->where('type', 'ENTRADA')->count() > 0;
+            $hasExit = $existingAttendances->where('type', 'SALIDA')->count() > 0;
+
+            if (!$hasEntry) {
+                $suggestedType = 'ENTRADA';
+                $isTypeLocked = true;
+            } elseif ($hasEntry && !$hasExit) {
+                $suggestedType = 'SALIDA';
+                $isTypeLocked = true;
+            } else {
+                $suggestedType = 'ENTRADA';
+                $isTypeLocked = false;
+            }
+
+            $lastAttendance = $existingAttendances->last();
+        }
+
+        return view('admin.attendances.create', compact(
+            'suggestedType',
+            'isTypeLocked',
+            'employeeId',
+            'attendanceDate',
+            'lastAttendance'
+        ));
     }
 
     public function store(Request $request)
@@ -78,29 +112,54 @@ class AttendanceController extends Controller
         $validated = $request->validate([
             'employee_id' => 'required|exists:employees,id',
             'attendance_date' => 'required|date',
-            'attendance_time' => 'required|date_format:H:i', // Nuevo campo para la hora
+            'attendance_time' => 'required|date_format:H:i',
             'type' => 'required|in:ENTRADA,SALIDA',
-            'period' => 'required|integer|min:1|max:4',
-            'status' => 'required|integer|min:1|max:4',
+            'status' => 'required|integer|min:1|max:2',
             'notes' => 'nullable|string'
         ]);
 
-        // Combinar fecha y hora
         $attendanceDateTime = $validated['attendance_date'] . ' ' . $validated['attendance_time'];
         $validated['attendance_date'] = Carbon::createFromFormat('Y-m-d H:i', $attendanceDateTime);
 
-        // Verificar si ya existe un registro para este empleado en la misma fecha, tipo y período
+        // Verificar si ya existe un registro para este empleado en la misma fecha y tipo
         $existingAttendance = Attendance::where('employee_id', $validated['employee_id'])
             ->whereDate('attendance_date', $validated['attendance_date'])
             ->where('type', $validated['type'])
-            ->where('period', $validated['period'])
             ->first();
 
         if ($existingAttendance) {
             return response()->json([
                 'success' => false,
-                'message' => 'Ya existe un registro de asistencia para este empleado en la fecha, tipo y período seleccionados.'
+                'message' => 'Ya existe un registro de ' . strtolower($validated['type']) . ' para este empleado en la fecha seleccionada.'
             ], 422);
+        }
+
+        // Validar secuencia lógica
+        $existingAttendances = Attendance::where('employee_id', $validated['employee_id'])
+            ->whereDate('attendance_date', $validated['attendance_date'])
+            ->orderBy('attendance_date', 'asc')
+            ->get();
+
+        $hasEntry = $existingAttendances->where('type', 'ENTRADA')->count() > 0;
+        $hasExit = $existingAttendances->where('type', 'SALIDA')->count() > 0;
+
+        // Validaciones de secuencia
+        if ($validated['type'] === 'SALIDA' && !$hasEntry) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No puede registrar una SALIDA sin tener una ENTRADA registrada primero.'
+            ], 422);
+        }
+
+        if ($validated['type'] === 'ENTRADA' && $hasExit) {
+            // Permitir múltiples entradas/salidas pero validar horarios
+            $lastExit = $existingAttendances->where('type', 'SALIDA')->last();
+            if ($lastExit && $validated['attendance_date'] <= $lastExit->attendance_date) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La nueva ENTRADA debe ser posterior a la última SALIDA registrada.'
+                ], 422);
+            }
         }
 
         Attendance::create($validated);
@@ -128,8 +187,7 @@ class AttendanceController extends Controller
             'attendance_date' => 'required|date',
             'attendance_time' => 'required|date_format:H:i',
             'type' => 'required|in:ENTRADA,SALIDA',
-            'period' => 'required|integer|min:1|max:4',
-            'status' => 'required|integer|min:1|max:4',
+            'status' => 'required|integer|min:1|max:2',
             'notes' => 'nullable|string'
         ]);
 
@@ -137,18 +195,17 @@ class AttendanceController extends Controller
         $attendanceDateTime = $validated['attendance_date'] . ' ' . $validated['attendance_time'];
         $validated['attendance_date'] = Carbon::createFromFormat('Y-m-d H:i', $attendanceDateTime);
 
-        // Verificar si ya existe otro registro para este empleado en la misma fecha, tipo y período
+        // Verificar si ya existe otro registro para este empleado en la misma fecha y tipo
         $existingAttendance = Attendance::where('employee_id', $validated['employee_id'])
             ->whereDate('attendance_date', $validated['attendance_date'])
             ->where('type', $validated['type'])
-            ->where('period', $validated['period'])
             ->where('id', '!=', $attendance->id)
             ->first();
 
         if ($existingAttendance) {
             return response()->json([
                 'success' => false,
-                'message' => 'Ya existe otro registro de asistencia para este empleado en la fecha, tipo y período seleccionados.'
+                'message' => 'Ya existe otro registro de asistencia para este empleado en la fecha y tipo seleccionados.'
             ], 422);
         }
 
@@ -224,29 +281,38 @@ class AttendanceController extends Controller
         ]);
     }
 
-    // Método para obtener las opciones de período
-    public function getPeriodOptions()
-    {
-        return response()->json([
-            'data' => [
-                ['id' => 1, 'name' => 'Mañana'],
-                ['id' => 2, 'name' => 'Tarde'],
-                ['id' => 3, 'name' => 'Noche'],
-                ['id' => 4, 'name' => 'Día completo']
-            ]
-        ]);
-    }
-
     // Método para obtener las opciones de estado
     public function getStatusOptions()
     {
         return response()->json([
             'data' => [
                 ['id' => 1, 'name' => 'Presente'],
-                ['id' => 2, 'name' => 'Ausente'],
-                ['id' => 3, 'name' => 'Tarde'],
-                ['id' => 4, 'name' => 'Permiso']
+                ['id' => 2, 'name' => 'Tarde']
             ]
+        ]);
+    }
+
+    public function getDayRecords(Request $request)
+    {
+        $request->validate([
+            'employee_id' => 'required|exists:employees,id',
+            'date' => 'required|date'
+        ]);
+
+        $records = Attendance::where('employee_id', $request->employee_id)
+            ->whereDate('attendance_date', $request->date)
+            ->orderBy('attendance_date', 'asc')
+            ->get()
+            ->map(function ($record) {
+                return [
+                    'type' => $record->type,
+                    'time' => $record->attendance_date->format('H:i:s'),
+                    'status' => $record->status
+                ];
+            });
+
+        return response()->json([
+            'records' => $records
         ]);
     }
 }

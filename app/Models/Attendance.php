@@ -13,7 +13,6 @@ class Attendance extends Model
         'employee_id',
         'attendance_date', 
         'type',
-        'period',
         'status',
         'notes'
     ];
@@ -23,17 +22,10 @@ class Attendance extends Model
     ];
 
     const STATUS_PRESENT = 1;
-    const STATUS_ABSENT = 2;
-    const STATUS_LATE = 3;
-    const STATUS_LEAVE = 4;
+    const STATUS_LATE = 2;
 
     const TYPE_ENTRADA = 'ENTRADA';
     const TYPE_SALIDA = 'SALIDA';
-
-    const PERIOD_MORNING = 1;
-    const PERIOD_AFTERNOON = 2;
-    const PERIOD_NIGHT = 3;
-    const PERIOD_FULL_DAY = 4;
 
     public function employee()
     {
@@ -60,14 +52,6 @@ class Attendance extends Model
         return $query;
     }
 
-    public function scopePeriod($query, $period)
-    {
-        if ($period) {
-            $query->where('period', $period);
-        }
-        return $query;
-    }
-
     public function scopeStatus($query, $status)
     {
         if ($status) {
@@ -89,10 +73,7 @@ class Attendance extends Model
     {
         return match($this->status) {
             self::STATUS_PRESENT => 'Presente',
-            self::STATUS_ABSENT => 'Ausente',
-            self::STATUS_LATE => 'Tarde',
-            self::STATUS_LEAVE => 'Permiso',
-            default => 'Desconocido'
+            self::STATUS_LATE => 'Tarde'
         };
     }
 
@@ -102,17 +83,6 @@ class Attendance extends Model
         return match($this->type) {
             self::TYPE_ENTRADA => 'Entrada',
             self::TYPE_SALIDA => 'Salida',
-            default => 'Desconocido'
-        };
-    }
-
-    public function getPeriodTextAttribute()
-    {
-        return match($this->period) {
-            self::PERIOD_MORNING => 'Mañana',
-            self::PERIOD_AFTERNOON => 'Tarde',
-            self::PERIOD_NIGHT => 'Noche',
-            self::PERIOD_FULL_DAY => 'Día completo',
             default => 'Desconocido'
         };
     }
@@ -133,13 +103,7 @@ class Attendance extends Model
     {
         return $this->status === self::STATUS_PRESENT;
     }
-
-    // Método para verificar si es ausente
-    public function isAbsent()
-    {
-        return $this->status === self::STATUS_ABSENT;
-    }
-
+    
     // Método para verificar si es tarde
     public function isLate()
     {

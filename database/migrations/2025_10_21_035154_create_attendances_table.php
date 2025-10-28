@@ -16,7 +16,6 @@ return new class extends Migration
             $table->unsignedBigInteger('employee_id');
             $table->datetime('attendance_date');
             $table->enum('type', ['ENTRADA', 'SALIDA']);
-            $table->integer('period');
             $table->integer('status');
             $table->text('notes')->nullable();
             $table->timestamps();
@@ -26,7 +25,6 @@ return new class extends Migration
             $table->index('employee_id');
             $table->index('attendance_date');
             $table->index('type');
-            $table->index('period');
             $table->index('status');
 
             $table->index(['employee_id', 'attendance_date']);
