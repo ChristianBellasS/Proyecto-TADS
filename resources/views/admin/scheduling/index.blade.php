@@ -132,7 +132,11 @@
                 "columns": [{
                         "data": "date",
                         "render": function(data) {
-                            return new Date(data).toLocaleDateString('es-ES');
+                            if (!data) return 'N/A';
+
+                            // Parsear manualmente YYYY-MM-DD a DD/MM/YYYY
+                            const [year, month, day] = data.split('-');
+                            return `${day}/${month}/${year}`;
                         }
                     },
                     {
@@ -282,9 +286,9 @@
             });
 
             $(document).on('shown.bs.modal', '#modalProgramacion', function() {
+                // Inicializar Select2 para grupos
                 if ($('#employee_group_select').length > 0 && !$('#employee_group_select').hasClass(
                         'select2-hidden-accessible')) {
-
                     $('#employee_group_select').select2({
                         language: "es",
                         placeholder: "Buscar grupo de personal...",
@@ -309,12 +313,10 @@
                                         results: []
                                     };
                                 }
-
                                 return {
                                     results: data.results.map(group => ({
                                         id: group.id,
-                                        text: group.name ||
-                                            'Sin nombre'
+                                        text: group.name || 'Sin nombre'
                                     })),
                                     pagination: {
                                         more: data.pagination && data.pagination.more
@@ -326,10 +328,9 @@
                         minimumInputLength: 1
                     });
 
-                    // Evento cuando se selecciona un grupo
+                    // ✅ AGREGAR ESTE EVENTO - Cuando se selecciona un grupo
                     $('#employee_group_select').on('change', function() {
                         const groupId = $(this).val();
-
                         if (groupId) {
                             loadGroupData(groupId);
                         } else {
@@ -338,18 +339,18 @@
                     });
                 }
 
-                $('select[id$="_select"]').not('#employee_group_select').each(function() {
-                    if (!$(this).hasClass('select2-hidden-accessible')) {
-                        $(this).select2({
-                            language: "es",
-                            placeholder: "Buscar empleado...",
-                            allowClear: true,
-                            width: '100%',
-                            theme: 'bootstrap',
-                            dropdownParent: $('#modalProgramacion')
-                        });
-                    }
-                });
+                // Inicializar Select2 para conductor
+                if ($('#driver_select').length > 0 && !$('#driver_select').hasClass(
+                        'select2-hidden-accessible')) {
+                    $('#driver_select').select2({
+                        language: "es",
+                        placeholder: "Conductor...",
+                        allowClear: true,
+                        width: '100%',
+                        theme: 'bootstrap',
+                        dropdownParent: $('#modalProgramacion')
+                    });
+                }
             });
 
             $(document).on('hidden.bs.modal', '#modalProgramacion', function() {
@@ -360,9 +361,8 @@
 
             function loadGroupData(groupId) {
                 $('#group_info').hide();
-                $('#driver_select, #assistant_1_select, #assistant_2_select')
-                    .html('<option value="">Cargando...</option>')
-                    .prop('disabled', true);
+                $('#driver_select').html('<option value="">Cargando...</option>').prop('disabled', true);
+                $('#assistantsContainer').empty();
 
                 fetch(`/admin/scheduling/group-data/${groupId}`)
                     .then(response => {
@@ -376,12 +376,12 @@
                             populateForm(data);
                             $('#group_info').show();
                         } else {
-                            alert('Error: ' + data.message);
+                            Swal.fire('Error', data.message || 'Error al cargar datos del grupo', 'error');
                             resetForm();
                         }
                     })
                     .catch(error => {
-                        alert('Error al cargar los datos del grupo: ' + error.message);
+                        Swal.fire('Error', 'Error al cargar los datos del grupo: ' + error.message, 'error');
                         resetForm();
                     });
             }
@@ -391,7 +391,7 @@
                 const driver = data.driver;
                 const assistants = data.assistants;
 
-                console.log('Datos recibidos en populateForm:', data); // Para debug
+                console.log('Datos recibidos en populateForm:', data);
 
                 // Mostrar información del grupo
                 $('#group_name').text(group.name);
@@ -404,66 +404,44 @@
                 $('#hidden_shift_id').val(group.shift_id);
                 $('#hidden_vehicle_id').val(group.vehicle_id);
 
-                // Llenar conductor - CORREGIDO
+                // Llenar conductor
                 $('#driver_select').empty().prop('disabled', false);
                 if (driver && driver.id) {
                     $('#driver_select').append(
                         new Option(
-                            `${driver.names} - ${driver.dni} (Conductor)`,
+                            `${driver.names} - ${driver.dni}`,
                             driver.id,
                             true,
                             true
                         )
                     );
-                } else {
-                    $('#driver_select').append(
-                        new Option('No hay conductor asignado', '', true, true)
-                    );
                 }
 
-                // Llenar ayudantes - CORREGIDO
-                $('#assistant_1_select').empty().prop('disabled', false);
-                $('#assistant_2_select').empty().prop('disabled', false);
+                // Limpiar contenedor de ayudantes y crear selects dinámicos
+                $('#assistantsContainer').empty();
 
-                if (assistants.length > 0) {
-                    // Ayudante 1
-                    $('#assistant_1_select').append(
-                        new Option(
-                            `${assistants[0].names} - ${assistants[0].dni} (Ayudante)`, // Quitamos position
-                            assistants[0].id,
-                            true,
-                            true
-                        )
-                    );
+                assistants.forEach((assistant, index) => {
+                    const selectHtml = `
+            <div class="form-group col-md-6">
+                <label>Ayudante ${index + 1}</label>
+                <select name="assistant_ids[]" class="form-control assistant-select" ${index === 0 ? 'required' : ''}>
+                    <option value="${assistant.id}" selected>${assistant.names} - ${assistant.dni}</option>
+                </select>
+            </div>
+        `;
+                    $('#assistantsContainer').append(selectHtml);
+                });
 
-                    // Ayudante 2 (si existe)
-                    if (assistants.length > 1) {
-                        $('#assistant_2_select').append(
-                            new Option(
-                                `${assistants[1].names} - ${assistants[1].dni} (Ayudante)`, // Quitamos position
-                                assistants[1].id,
-                                true,
-                                true
-                            )
-                        );
-                    } else {
-                        $('#assistant_2_select').append(
-                            new Option('No hay segundo ayudante', '', true, true)
-                        );
-                    }
-                } else {
-                    $('#assistant_1_select').append(
-                        new Option('No hay ayudantes asignados', '', true, true)
-                    );
-                    $('#assistant_2_select').append(
-                        new Option('No hay ayudantes asignados', '', true, true)
-                    );
-                }
+                // Inicializar Select2 para los nuevos selects
+                $('.assistant-select').select2({
+                    theme: 'bootstrap',
+                    width: '100%',
+                    dropdownParent: $('#modalProgramacion'),
+                    placeholder: 'Ayudante asignado',
+                    allowClear: false
+                });
 
-                // Hacer los selects de solo lectura
-                $('#driver_select, #assistant_1_select, #assistant_2_select')
-                    .prop('readonly', true)
-                    .trigger('change.select2');
+                $('#group_info').show();
             }
 
             function resetForm() {
@@ -473,12 +451,13 @@
                 // Limpiar campos hidden
                 $('#hidden_zone_id, #hidden_shift_id, #hidden_vehicle_id').val('');
 
-                $('#driver_select, #assistant_1_select, #assistant_2_select')
-                    .empty()
+                // Limpiar conductor
+                $('#driver_select').empty()
                     .append(new Option('Seleccione un grupo primero...', '', true, true))
-                    .prop('readonly', true)
-                    .prop('disabled', false)
-                    .trigger('change.select2');
+                    .prop('disabled', true);
+
+                // Limpiar ayudantes
+                $('#assistantsContainer').empty();
             }
 
             // Eliminar programación con confirmación de SweetAlert
@@ -568,6 +547,11 @@
                 var form = $(this);
                 var formData = new FormData(this);
 
+                // Verificar si estamos en el modal (no en la página create)
+                if (!form.closest('#modalProgramacion').length) {
+                    return true; // Permitir envío normal si no está en modal
+                }
+
                 $.ajax({
                     url: form.attr('action'),
                     type: form.attr('method'),
@@ -585,23 +569,26 @@
                     },
                     error: function(xhr) {
                         var error = xhr.responseJSON;
-                        if (error.errors) {
+                        if (error && error.errors) {
                             var errorMessages = [];
                             for (var key in error.errors) {
-                                errorMessages.push(error.errors[
-                                    key][0]);
+                                errorMessages.push(error.errors[key][0]);
                             }
                             Swal.fire({
                                 title: "Error!",
-                                html: errorMessages
-                                    .join('<br>'),
+                                html: errorMessages.join('<br>'),
+                                icon: "error"
+                            });
+                        } else if (error && error.message) {
+                            Swal.fire({
+                                title: "Error!",
+                                text: error.message,
                                 icon: "error"
                             });
                         } else {
                             Swal.fire({
                                 title: "Error!",
-                                text: error.message ||
-                                    'Error al crear la programación',
+                                text: 'Error al crear la programación',
                                 icon: "error"
                             });
                         }
@@ -635,12 +622,15 @@
             padding: 0.25rem 0.5rem;
             font-size: 0.75rem;
         }
+
         .gap-2 {
             gap: 0.5rem !important;
         }
+
         .d-flex.gap-2 .btn {
             margin: 0;
         }
+
         .btn-block {
             min-width: auto;
         }
