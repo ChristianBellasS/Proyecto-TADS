@@ -20,8 +20,6 @@
                             <th>Descripción</th>
                             <th>Hora Entrada</th>
                             <th>Hora Salida</th>
-                            <th>Creado</th>
-                            <th>Actualizado</th>
                             <th width="10px"></th>
                             <th width="10px"></th>
                         </tr>
@@ -67,8 +65,6 @@
                 { "data": "description" },
                 { "data": "hour_in" },
                 { "data": "hour_out" },
-                { "data": "created_at" },
-                { "data": "updated_at" },
                 { "data": "edit", "orderable": false, "searchable": false },
                 { "data": "delete", "orderable": false, "searchable": false }
             ],
