@@ -453,6 +453,11 @@ return [
             'submenu' => [
                 [
                     'text' => 'Turnos',
+                    'url' => 'admin/shifts',
+                    'icon' => 'fas fa-clock',
+                ],
+                [
+                    'text' => 'Contratos',
                     'url' => 'admin/contracts',
                     'icon' => 'fas fa-file-contract',
                 ],

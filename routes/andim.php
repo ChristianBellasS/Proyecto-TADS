@@ -18,6 +18,7 @@ use App\Http\Controllers\admin\EmployeeController;
 use App\Http\Controllers\admin\ContractController;
 use App\Http\Controllers\admin\EmployeeGroupController;
 use App\Http\Controllers\admin\SchedulingController;
+use App\Http\Controllers\admin\ShiftController;
 
 
 // use App\Http\Controllers\AttendanceController;
@@ -180,3 +181,8 @@ Route::get('/scheduling/group-data/{groupId}', [SchedulingController::class, 'ge
 Route::get('/scheduling/zone-data/{zone}', [SchedulingController::class, 'getZoneData'])->name('admin.scheduling.zone-data');
 // Route::post('/scheduling/check-availability', [SchedulingController::class, 'checkAvailability'])->name('admin.scheduling.check-availability');
 Route::post('/scheduling/bulk-update', [SchedulingController::class, 'bulkUpdate'])->name('admin.scheduling.bulk-update');
+Route::post('/scheduling/check-availability', [SchedulingController::class, 'checkAvailability'])->name('admin.scheduling.check-availability');
+Route::post('/scheduling/bulk-update', [SchedulingController::class, 'bulkUpdate'])->name('admin.scheduling.bulk-update');
+
+//TURNOS
+Route::resource('shifts', ShiftController::class)->names('admin.shifts');
