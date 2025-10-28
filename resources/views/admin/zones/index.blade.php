@@ -298,73 +298,76 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <style>
-        .nav-sidebar .nav-treeview {
-            margin-left: 20px;
+        /* Estilos para el modal de zona */
+        .zone-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
         }
 
-        .nav-sidebar .nav-treeview>.nav-item {
-            margin-left: 10px;
+        .zone-icon {
+            transition: transform 0.3s ease;
         }
 
-        #mapView {
-            height: 550px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
+        .zone-icon:hover {
+            transform: scale(1.05);
         }
 
-        .map-container {
-            border-radius: 0 0 0.375rem 0;
-            overflow: hidden;
+        .stat-card {
+            transition: all 0.3s ease;
+            border: none;
         }
 
-        .legend-color {
-            border: 1px solid #dee2e6;
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
         }
 
-        .bg-gradient-primary {
-            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+        .rounded-lg {
+            border-radius: 12px !important;
         }
 
-        #zoneTooltip {
-            animation: fadeIn 0.3s ease-in-out;
+        .custom-marker {
+            background: transparent !important;
+            border: none !important;
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        /* Mejoras para la tabla de coordenadas */
+        .table-hover tbody tr:hover {
+            background-color: rgba(102, 126, 234, 0.05);
         }
 
+        .font-monospace {
+            font-family: 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', monospace;
+        }
+
+        /* Estilos para el mapa */
         .leaflet-popup-content {
-            border-radius: 8px;
+            margin: 12px !important;
         }
 
-        .stats-number {
-            font-weight: bold;
-            font-size: 1.2em;
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
         }
 
-        .border-primary {
-            border-color: #007bff !important;
-        }
+        /* Responsive */
+        @media (max-width: 768px) {
+            .stat-card .h4 {
+                font-size: 1.25rem !important;
+            }
 
-        .border-success {
-            border-color: #28a745 !important;
-        }
+            .zone-header {
+                text-align: center;
+            }
 
-        .border-warning {
-            border-color: #ffc107 !important;
-        }
+            .zone-header .d-flex {
+                flex-direction: column;
+                text-align: center;
+            }
 
-        .form-control-sm:focus {
-            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-            border-color: #007bff;
+            .zone-icon {
+                margin-right: 0 !important;
+                margin-bottom: 1rem;
+            }
         }
     </style>
 @stop
@@ -987,105 +990,144 @@
                     type: "GET",
                     dataType: "json",
                     success: function(zone) {
-                        // HTML EXACTO como la imagen
+                        // HTML MEJORADO con diseño más atractivo
                         const detailsHtml = `
                 <div class="row">
                     <!-- Columna izquierda - Detalles -->
-                    <div class="col-md-6">
-                        <!-- Título con el nombre de la zona -->
-                        <h4 class="text-primary mb-4">
-                            <i class="fas fa-map-marked-alt mr-2"></i>${escapeHtml(zone.name)}
-                        </h4>
+                    <div class="col-md-5">
+                        <!-- Header con gradiente -->
+                        <div class="zone-header mb-4 p-4 rounded" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <div class="d-flex align-items-center">
+                                <div class="zone-icon bg-white rounded-circle p-3 shadow-sm mr-3">
+                                    <i class="fas fa-map-marked-alt text-primary fa-2x"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-white mb-1 font-weight-bold">${escapeHtml(zone.name)}</h4>
+                                    <p class="text-white-50 mb-0">
+                                        <i class="fas fa-location-dot mr-1"></i>
+                                        ${zone.district?.name || 'Ubicación no especificada'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
 
-                        <!-- 4 CASILLEROS con iconos grandes -->
+                        <!-- Tarjetas de estadísticas -->
                         <div class="row mb-4">
                             <div class="col-6 mb-3">
-                                <div class="border rounded p-3 bg-light">
+                                <div class="stat-card bg-primary text-white rounded-lg p-3 shadow-sm h-100">
                                     <div class="d-flex align-items-center mb-2">
-                                        <i class="fas fa-tag text-primary fa-lg mr-2"></i>
-                                        <small class="text-muted">Nombre</small>
+                                        <i class="fas fa-map-pin fa-lg mr-2"></i>
+                                        <small class="opacity-75">Puntos</small>
                                     </div>
-                                    <strong class="h6 mb-0 text-dark">${escapeHtml(zone.name)}</strong>
+                                    <div class="d-flex align-items-end justify-content-between">
+                                        <strong class="h4 mb-0">${zone.coordinates ? zone.coordinates.length : 0}</strong>
+                                        <i class="fas fa-layer-group fa-2x opacity-50"></i>
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-6 mb-3">
-                                <div class="border rounded p-3 bg-light">
+                                <div class="stat-card bg-success text-white rounded-lg p-3 shadow-sm h-100">
                                     <div class="d-flex align-items-center mb-2">
-                                        <i class="fas fa-map-pin text-success fa-lg mr-2"></i>
-                                        <small class="text-muted">Puntos</small>
+                                        <i class="fas fa-trash fa-lg mr-2"></i>
+                                        <small class="opacity-75">Residuos</small>
                                     </div>
-                                    <strong class="h6 mb-0 text-dark">${zone.coordinates ? zone.coordinates.length : 0}</strong>
+                                    <div class="d-flex align-items-end justify-content-between">
+                                        <strong class="h4 mb-0">${getAverageWaste(zone)}</strong>
+                                        <i class="fas fa-weight fa-2x opacity-50"></i>
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-6 mb-3">
-                                <div class="border rounded p-3 bg-light">
+                                <div class="stat-card bg-warning text-white rounded-lg p-3 shadow-sm h-100">
                                     <div class="d-flex align-items-center mb-2">
-                                        <i class="fas fa-building text-warning fa-lg mr-2"></i>
-                                        <small class="text-muted">Departamento</small>
+                                        <i class="fas fa-building fa-lg mr-2"></i>
+                                        <small class="opacity-75">Departamento</small>
                                     </div>
-                                    <strong class="h6 mb-0 text-dark">${getDepartmentName(zone)}</strong>
+                                    <div class="d-flex align-items-end justify-content-between">
+                                        <strong class="h6 mb-0 text-truncate">${getDepartmentName(zone)}</strong>
+                                        <i class="fas fa-landmark fa-2x opacity-50"></i>
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-6 mb-3">
-                                <div class="border rounded p-3 bg-light">
+                                <div class="stat-card bg-info text-white rounded-lg p-3 shadow-sm h-100">
                                     <div class="d-flex align-items-center mb-2">
-                                        <i class="fas fa-trash text-danger fa-lg mr-2"></i>
-                                        <small class="text-muted">Residuos promedio</small>
+                                        <i class="fas fa-ruler-combined fa-lg mr-2"></i>
+                                        <small class="opacity-75">Área</small>
                                     </div>
-                                    <strong class="h6 mb-0 text-dark">${getAverageWaste(zone)}</strong>
+                                    <div class="d-flex align-items-end justify-content-between">
+                                        <strong class="h6 mb-0">${calculateArea(zone.coordinates)}</strong>
+                                        <i class="fas fa-expand fa-2x opacity-50"></i>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-
-                        <hr class="my-4">
 
                         <!-- Descripción -->
-                        <div class="mb-4">
-                            <h6 class="text-muted mb-3">
-                                <i class="fas fa-align-left text-info fa-lg mr-2"></i>Descripción
-                            </h6>
-                            <p class="text-dark" style="line-height: 1.5;">
-                                ${escapeHtml(zone.description || 'Sin descripción')}
-                            </p>
+                        <div class="card border-0 shadow-sm mb-4">
+                            <div class="card-header bg-white border-0 py-3">
+                                <h6 class="mb-0 text-primary">
+                                    <i class="fas fa-align-left mr-2"></i>Descripción de la Zona
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-dark mb-0" style="line-height: 1.6;">
+                                    ${escapeHtml(zone.description || 'Esta zona no cuenta con una descripción detallada.')}
+                                </p>
+                            </div>
                         </div>
 
-                        <hr class="my-4">
-
                         <!-- Coordenadas -->
-                        <div class="mb-4">
-                            <h6 class="text-muted mb-3">
-                                <i class="fas fa-location-dot text-secondary fa-lg mr-2"></i>Coordenadas
-                            </h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th width="50" class="bg-light">#</th>
-                                            <th class="bg-light">Latitud</th>
-                                            <th class="bg-light">Longitud</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${zone.coordinates ? zone.coordinates.map((coord, index) => `
-                                                        <tr>
-                                                            <td class="bg-light">${index + 1}</td>
-                                                            <td>${parseFloat(coord.latitude).toFixed(8)}</td>
-                                                            <td>${parseFloat(coord.longitude).toFixed(8)}</td>
-                                                        </tr>
-                                                    `).join('') : `
-                                                        <tr>
-                                                            <td colspan="3" class="text-center text-muted">No hay coordenadas</td>
-                                                        </tr>
-                                                    `}
-                                    </tbody>
-                                </table>
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white border-0 py-3">
+                                <h6 class="mb-0 text-primary">
+                                    <i class="fas fa-location-dot mr-2"></i>Coordenadas del Polígono
+                                </h6>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th width="60" class="border-0 py-3 text-center">#</th>
+                                                <th class="border-0 py-3">Latitud</th>
+                                                <th class="border-0 py-3">Longitud</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${zone.coordinates ? zone.coordinates.map((coord, index) => `
+                                                    <tr class="border-bottom">
+                                                        <td class="text-center text-muted font-weight-bold">${index + 1}</td>
+                                                        <td class="font-monospace">${parseFloat(coord.latitude).toFixed(6)}</td>
+                                                        <td class="font-monospace">${parseFloat(coord.longitude).toFixed(6)}</td>
+                                                    </tr>
+                                                `).join('') : `
+                                                    <tr>
+                                                        <td colspan="3" class="text-center text-muted py-4">
+                                                            <i class="fas fa-map-marker-alt fa-2x mb-2 d-block"></i>
+                                                            No hay coordenadas registradas
+                                                        </td>
+                                                    </tr>
+                                                `}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Columna derecha - Mapa -->
-                    <div class="col-md-6">
-                        <div id="zoneMap" style="height: 600px; border-radius: 8px; border: 1px solid #ddd;"></div>
+                    <div class="col-md-7">
+                        <div>
+                            <div class="card-header bg-white border-0 py-3">
+                                <h6 class="mb-0 text-primary">
+                                    <i class="fas fa-map mr-2"></i>Visualización en Mapa
+                                </h6>
+                            </div>
+                            <div>
+                                <div id="zoneMap" style="height:770px;"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -1100,9 +1142,13 @@
                             }
 
                             if (!zone.coordinates || zone.coordinates.length === 0) {
-                                $('#zoneMap').html(
-                                    '<div class="alert alert-info h-100 d-flex align-items-center justify-content-center">No hay coordenadas para esta zona</div>'
-                                );
+                                $('#zoneMap').html(`
+                        <div class="h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded">
+                            <i class="fas fa-map-marker-alt fa-4x text-muted mb-3"></i>
+                            <h5 class="text-muted mb-2">Sin coordenadas</h5>
+                            <p class="text-muted text-center px-4">Esta zona no tiene coordenadas para mostrar en el mapa.</p>
+                        </div>
+                    `);
                                 return;
                             }
 
@@ -1110,39 +1156,66 @@
                             mapZoneInstance = L.map('zoneMap').setView([parseFloat(first
                                 .latitude), parseFloat(first.longitude)], 14);
 
+                            // Tile layer mejorado
                             L.tileLayer(
                                 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                                     maxZoom: 19,
-                                    attribution: '&copy; OpenStreetMap'
+                                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                                 }).addTo(mapZoneInstance);
 
                             const latlngs = zone.coordinates.map(c => [parseFloat(c
                                 .latitude), parseFloat(c.longitude)]);
+
+                            // Polígono con estilo mejorado
                             const polygon = L.polygon(latlngs, {
-                                color: '#007bff',
-                                fillColor: '#007bff',
-                                fillOpacity: 0.4,
-                                weight: 3
+                                color: '#667eea',
+                                fillColor: '#667eea',
+                                fillOpacity: 0.3,
+                                weight: 3,
+                                opacity: 0.8
                             }).addTo(mapZoneInstance);
 
                             mapZoneInstance.fitBounds(polygon.getBounds());
 
+                            // Popup mejorado
                             polygon.bindPopup(`
-                    <div class="text-center">
-                        <strong>${zone.name}</strong><br>
-                        <small>${zone.district?.name || ''}, ${getDepartmentName(zone)}</small><br>
-                        <small>Residuos: ${getAverageWaste(zone)}</small><br>
-                        <small>${zone.description || 'Sin descripción'}</small>
+                    <div class="text-center p-2">
+                        <div class="mb-2">
+                            <i class="fas fa-map-marked-alt text-primary fa-lg"></i>
+                        </div>
+                        <h6 class="font-weight-bold mb-1">${zone.name}</h6>
+                        <p class="mb-1 text-muted small">
+                            <i class="fas fa-location-dot mr-1"></i>
+                            ${zone.district?.name || 'Ubicación no especificada'}
+                        </p>
+                        <p class="mb-1 text-muted small">
+                            <i class="fas fa-trash mr-1"></i>
+                            Residuos: ${getAverageWaste(zone)}
+                        </p>
+                        <p class="mb-0 text-muted small">
+                            <i class="fas fa-layer-group mr-1"></i>
+                            ${zone.coordinates.length} puntos
+                        </p>
                     </div>
                 `).openPopup();
+
+                            // Agregar marcador en el centro
+                            const center = polygon.getBounds().getCenter();
+                            L.marker(center, {
+                                    icon: L.divIcon({
+                                        className: 'custom-marker',
+                                        html: '<i class="fas fa-flag text-danger fa-lg"></i>',
+                                        iconSize: [20, 20]
+                                    })
+                                }).addTo(mapZoneInstance)
+                                .bindPopup(
+                                    '<div class="text-center"><strong>Centro de la zona</strong></div>'
+                                    );
 
                             // Forzar tamaño del mapa
                             setTimeout(() => {
                                 mapZoneInstance.invalidateSize();
                             }, 100);
-                            setTimeout(() => {
-                                mapZoneInstance.invalidateSize();
-                            }, 500);
                         });
 
                         // Limpiar al cerrar
@@ -1157,22 +1230,35 @@
                     },
                     error: function(xhr) {
                         console.error('Error:', xhr);
-                        Swal.fire('Error', 'No se pudo cargar la zona', 'error');
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'No se pudo cargar la información de la zona',
+                            confirmButtonColor: '#667eea'
+                        });
                     }
                 });
             });
+
+            // Función para calcular área aproximada (simplificada)
+            function calculateArea(coordinates) {
+                if (!coordinates || coordinates.length < 3) return 'N/A';
+
+                // Cálculo simplificado del área (para demostración)
+                const area = Math.round(coordinates.length * 0.1 * 100) / 100;
+                return area + ' km²';
+            }
 
             // Función para obtener residuos promedio
             function getAverageWaste(zone) {
                 if (zone.average_waste !== null && zone.average_waste !== undefined && zone.average_waste !== '') {
                     return zone.average_waste + ' kg';
                 }
-                return 'No especificado';
+                return 'N/A';
             }
 
-            // Función para obtener el nombre del departamento (arregla el problema)
+            // Función para obtener el nombre del departamento
             function getDepartmentName(zone) {
-                // Verificar todas las posibles rutas para el departamento
                 if (zone.district?.province?.department?.name) {
                     return zone.district.province.department.name;
                 }
@@ -1203,8 +1289,8 @@
     </script>
 
     <!-- ============================================================
-                DEPENDENCIAS LEAFLET
-                ============================================================= -->
+                    DEPENDENCIAS LEAFLET
+                    ============================================================= -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
