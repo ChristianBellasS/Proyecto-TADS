@@ -394,6 +394,11 @@ class SchedulingController extends Controller
                 }
             }
 
+            // Agrega los dias
+            $workDays = $group->days ? explode(',', $group->days) : [];
+
+
+
             return response()->json([
                 'success' => true,
                 'group' => [
@@ -410,6 +415,7 @@ class SchedulingController extends Controller
                 ],
                 'driver' => $driver,
                 'assistants' => $assistants,
+                'work_days' => $workDays,
                 'total_employees' => $assistants->count() + ($driver ? 1 : 0)
             ]);
         } catch (\Exception $e) {
