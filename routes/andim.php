@@ -185,5 +185,9 @@ Route::post('/scheduling/bulk-update', [SchedulingController::class, 'bulkUpdate
 Route::post('/scheduling/check-availability', [SchedulingController::class, 'checkAvailability'])->name('admin.scheduling.check-availability');
 Route::post('/scheduling/bulk-update', [SchedulingController::class, 'bulkUpdate'])->name('admin.scheduling.bulk-update');
 
+//
+Route::get('/scheduling/search-available-assistants', [SchedulingController::class, 'searchAvailableAssistants'])
+    ->name('admin.scheduling.search-available-assistants');
+
 //TURNOS
 Route::resource('shifts', ShiftController::class)->names('admin.shifts');

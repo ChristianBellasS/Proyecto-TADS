@@ -65,24 +65,12 @@
 <div class="form-row">
     <div class="form-group col-md-4">
         <label>Conductor *</label>
-        <select name="driver_id" id="driver_select" class="form-control" required readonly>
+        <select name="driver_id" id="driver_select" class="form-control" required>
             <option value="">Seleccione grupo...</option>
         </select>
     </div>
-    
-    <!-- <div class="form-group col-md-4">
-        <label>Ayudante 1 *</label>
-        <select name="assistant_ids[]" id="assistant_1_select" class="form-control" required readonly>
-            <option value="">Seleccione grupo...</option>
-        </select>
-    </div>
-    <div class="form-group col-md-4">
-        <label>Ayudante 2</label>
-        <select name="assistant_ids[]" id="assistant_2_select" class="form-control" readonly>
-            <option value="">Seleccione grupo...</option>
-        </select>
-    </div> -->
-     <!-- Contenedor dinámico para ayudantes -->
+
+    <!-- Contenedor dinámico para ayudantes -->
     <div id="assistantsContainer" class="form-row col-md-8">
         <!-- Aquí se generarán los selects de ayudantes según el grupo -->
     </div>
@@ -153,7 +141,9 @@
                 processResults: function(data) {
                     return {
                         results: data.results || [],
-                        pagination: data.pagination || { more: false }
+                        pagination: data.pagination || {
+                            more: false
+                        }
                     };
                 },
                 cache: true
@@ -171,7 +161,7 @@
             }
 
             showLoading();
-            
+
             // Obtener datos del grupo
             $.get(`/admin/scheduling/group-data/${groupId}`)
                 .done(function(data) {
@@ -208,8 +198,6 @@
             const startDate = $('input[name="start_date"]').val();
             const endDate = $('input[name="end_date"]').val();
             const driverId = $('#driver_select').val();
-            const assistant1Id = $('#assistant_1_select').val();
-            const assistant2Id = $('#assistant_2_select').val();
             const vehicleId = $('#hidden_vehicle_id').val();
             const zoneId = $('#hidden_zone_id').val();
             const shiftId = $('#hidden_shift_id').val();
@@ -222,7 +210,18 @@
             }
 
             if (!driverId) {
-                showValidationInfo('Seleccione un grupo de personal');
+                showValidationInfo('Seleccione un conductor');
+                return;
+            }
+
+            // Recolectar dinámicamente los IDs de todos los ayudantes
+            const assistantIds = $('.assistant-select').map(function() {
+                return $(this).val();
+            }).get().filter(id => id);
+
+            // Validar que haya al menos un ayudante
+            if (assistantIds.length === 0) {
+                showValidationInfo('Seleccione al menos un ayudante');
                 return;
             }
 
@@ -231,20 +230,11 @@
                 return;
             }
 
-            /*
-            const employeeIds = [driverId];
-            if (assistant1Id) employeeIds.push(assistant1Id);
-            if (assistant2Id) employeeIds.push(assistant2Id);
-
-            showValidationLoading();
-            */
-                // Recolectar dinámicamente los IDs de todos los ayudantes
-            const assistantIds = $('.assistant-select').map(function() {
-                return $(this).val();
-            }).get();
-
             // Todos los empleados (conductor + ayudantes)
             const employeeIds = [driverId, ...assistantIds];
+
+            showValidationLoading();
+
             // Llamar a la validación del servidor
             $.ajax({
                 url: '{{ route('admin.scheduling.check-availability') }}',
@@ -264,30 +254,31 @@
                         showValidationSuccess(response.message);
                         enableSubmitButton();
                     } else {
-                        showValidationError(response.message, response.errors, response.suggestions);
+                        showValidationError(response.message, response.errors, response
+                            .suggestions);
                         disableSubmitButton();
                     }
                 },
                 error: function(xhr) {
-                    showValidationError('Error en la validación: ' + (xhr.responseJSON?.message || 'Error desconocido'));
+                    showValidationError('Error en la validación: ' + (xhr.responseJSON?.message ||
+                        'Error desconocido'));
                     disableSubmitButton();
                 }
             });
         }
 
-        // Funciones auxiliares
+        // Funciones auxiliares - CORREGIDAS
         function showLoading() {
             $('#group_info').hide();
-            $('#driver_select, #assistant_1_select, #assistant_2_select')
-                .html('<option value="">Cargando...</option>')
-                .prop('disabled', true);
+            $('#driver_select').html('<option value="">Cargando...</option>').prop('disabled', true);
+            $('#assistantsContainer').empty();
         }
 
         function populateFormWithGroupData(data) {
             const group = data.group;
             const driver = data.driver;
             const assistants = data.assistants;
-            const workDays = data.work_days || []; // Agregado para marcar días     
+            const workDays = data.work_days || [];
 
             // Mostrar información del grupo
             $('#group_name').text(group.name);
@@ -306,54 +297,43 @@
                 $('#driver_select').append(new Option(driver.names, driver.id, true, true));
             }
 
-            // Llenar ayudantes
-            /*
-            $('#assistant_1_select').empty().prop('disabled', false);
-            $('#assistant_2_select').empty().prop('disabled', false);
-
-            if (assistants.length > 0) {
-                if (assistants[0]) {
-                    $('#assistant_1_select').append(new Option(assistants[0].names, assistants[0].id, true, true));
-                }
-                if (assistants[1]) {
-                    $('#assistant_2_select').append(new Option(assistants[1].names, assistants[1].id, true, true));
-                }
-            }
-            */
-           // Limpiar contenedor de ayudantes
+            // Limpiar contenedor de ayudantes
             $('#assistantsContainer').empty();
 
-            // Crear un select por cada ayudante que venga del grupo
+            // CORRECCIÓN: Crear selects VACÍOS para que carguen sugerencias
             assistants.forEach((assistant, index) => {
-                const requiredAttr = index === 0 ? 'required' : ''; // solo el primer ayudante obligatorio
+                const requiredAttr = index === 0 ? 'required' : '';
                 const selectHtml = `
                     <div class="form-group col-md-6">
                         <label>Ayudante ${index + 1} ${index === 0 ? '*' : ''}</label>
-                        <select name="assistant_ids[]" class="form-control assistant-select" ${requiredAttr} readonly>
-                            <option value="${assistant.id}" selected>${assistant.names}</option>
+                        <select name="assistant_ids[]" class="form-control assistant-select" ${requiredAttr}>
+                            <!-- Dejar vacío para que Select2 cargue sugerencias -->
                         </select>
                     </div>
                 `;
                 $('#assistantsContainer').append(selectHtml);
             });
 
-            // Inicializar Select2 en los ayudantes recién creados
-            $('#assistantsContainer .assistant-select').each(function() {
-                if (!$(this).hasClass('select2-hidden-accessible')) {
-                    $(this).select2({
-                        theme: 'bootstrap',
-                        width: '100%',
-                        dropdownParent: $('#modalProgramacion'),
-                        placeholder: 'Seleccione ayudante...',
-                        allowClear: true
-                    });
-                }
-            });
+            // Inicializar Select2 para ayudantes
+            initializeAssistantSelects();
 
-
+            // CORRECCIÓN: Establecer valores después de inicializar Select2
+            setTimeout(() => {
+                assistants.forEach((assistant, index) => {
+                    if (assistant && assistant.id) {
+                        const $select = $('.assistant-select').eq(index);
+                        if ($select.length) {
+                            // Crear y seleccionar la opción
+                            const option = new Option(assistant.names, assistant.id, true,
+                                true);
+                            $select.append(option).trigger('change');
+                        }
+                    }
+                });
+            }, 800); // Dar tiempo a que Select2 se inicialice
 
             // Marcar los días de trabajo
-            $('.day-checkbox').prop('checked', false); // primero desmarcar todos
+            $('.day-checkbox').prop('checked', false);
             workDays.forEach(day => {
                 $(`#day_${day}`).prop('checked', true);
             });
@@ -361,12 +341,70 @@
             $('#group_info').show();
         }
 
+        function initializeAssistantSelects() {
+            $('.assistant-select').each(function() {
+                const $select = $(this);
+
+                if (!$select.hasClass('select2-hidden-accessible')) {
+                    $select.select2({
+                        theme: 'bootstrap',
+                        width: '100%',
+                        dropdownParent: $('#modalProgramacion'),
+                        placeholder: 'Buscar ayudante disponible...',
+                        allowClear: true,
+                        ajax: {
+                            url: '{{ route('admin.scheduling.search-available-assistants') }}',
+                            type: 'GET',
+                            dataType: 'json',
+                            delay: 300,
+                            data: function(params) {
+                                const data = {
+                                    search: params.term,
+                                    date: $('input[name="start_date"]').val() ||
+                                        '{{ now()->format('Y-m-d') }}',
+                                    exclude_employees: getCurrentEmployeeIds(),
+                                    _token: '{{ csrf_token() }}'
+                                };
+
+                                console.log('Enviando datos a servidor:', data); // DEBUG
+                                return data;
+                            },
+                            processResults: function(data) {
+                                console.log('Respuesta del servidor:', data); // DEBUG
+                                return {
+                                    results: data.results || [],
+                                    pagination: data.pagination || {
+                                        more: false
+                                    }
+                                };
+                            },
+                            cache: true
+                        },
+                        minimumInputLength: 1
+                    });
+                }
+            });
+        }
+
+        function getCurrentEmployeeIds() {
+            const driverId = $('#driver_select').val();
+            const currentAssistantIds = $('.assistant-select').map(function() {
+                const val = $(this).val();
+                return val && val !== '' ? parseInt(val) : null;
+            }).get().filter(id => id !== null);
+
+            const allIds = [driverId ? parseInt(driverId) : null, ...currentAssistantIds].filter(id => id !==
+                null);
+
+            return allIds;
+        }
+
         function resetForm() {
             $('#group_info').hide();
-            $('#driver_select, #assistant_1_select, #assistant_2_select')
-                .html('<option value="">Seleccione un grupo primero...</option>')
-                .prop('disabled', true);
-                
+            $('#driver_select').html('<option value="">Seleccione un grupo primero...</option>').prop(
+                'disabled', true);
+            $('#assistantsContainer').empty();
+
             disableSubmitButton();
             showValidationInfo('Complete los datos y valide la disponibilidad');
         }
@@ -380,44 +418,46 @@
         }
 
         function showValidationLoading() {
-            $('#validationStatus').html('<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Validando disponibilidad...</div>');
+            $('#validationStatus').html(
+                '<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Validando disponibilidad...</div>'
+            );
         }
 
         function showValidationInfo(message) {
-            $('#validationStatus').html(`<div class="alert alert-info"><i class="fas fa-info-circle"></i> ${message}</div>`);
+            $('#validationStatus').html(
+                `<div class="alert alert-info"><i class="fas fa-info-circle"></i> ${message}</div>`);
         }
 
         function showValidationSuccess(message) {
-            $('#validationStatus').html(`<div class="alert alert-success"><i class="fas fa-check-circle"></i> ${message}</div>`);
+            $('#validationStatus').html(
+                `<div class="alert alert-success"><i class="fas fa-check-circle"></i> ${message}</div>`);
         }
 
         function showValidationError(message, errors = [], suggestions = []) {
+            let html =
+                `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> <strong>${message}</strong>`;
 
-
-            // Filtrar duplicados
-            // errors = [...new Set(errors)];
-            // suggestions = [...new Set(suggestions)];
-
-            let html = `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> <strong>${message}</strong>`;
-            
             if (errors.length > 0) {
                 html += '<ul class="mb-0 mt-2">';
-                errors.forEach(error => html += `<li>${error}</li>`);
+                // Mostrar solo errores únicos
+                const uniqueErrors = [...new Set(errors)];
+                uniqueErrors.forEach(error => html += `<li>${error}</li>`);
                 html += '</ul>';
             }
-            
+
             if (suggestions.length > 0) {
                 html += '<div class="mt-2"><strong><i class="fas fa-lightbulb"></i> Sugerencias:</strong><ul>';
-                suggestions.forEach(suggestion => html += `<li>${suggestion}</li>`);
+                // Mostrar solo sugerencias únicas
+                const uniqueSuggestions = [...new Set(suggestions)];
+                uniqueSuggestions.forEach(suggestion => html += `<li>${suggestion}</li>`);
                 html += '</ul></div>';
             }
-            
+
             html += '</div>';
-            // $('#validationStatus').html(html);
-                // Verificamos si el contenido actual ya es igual al que queremos mostrar
+
             const currentHtml = $('#validationStatus').html();
             if (currentHtml.trim() !== html.trim()) {
-               $('#validationStatus').html(html); // Solo reemplazamos si es diferente
+                $('#validationStatus').html(html);
             }
         }
 
@@ -461,5 +501,48 @@
 
     .alert-light {
         background-color: #f8f9fa;
+    }
+
+    /* Opciones más limpias */
+    .select2-container--bootstrap .select2-results__option {
+        padding: 10px 12px;
+        border-bottom: 1px solid #f8f9fa;
+        transition: background-color 0.2s ease;
+        font-size: 14px;
+    }
+
+    /* Hover suave */
+    .select2-container--bootstrap .select2-results__option--highlighted {
+        background-color: #007bff !important;
+        color: white !important;
+    }
+
+    /* Icono simple */
+    .select2-container--bootstrap .select2-results__option:before {
+        content: "•";
+        margin-right: 8px;
+        color: #6c757d;
+        font-weight: bold;
+    }
+
+    /* Badge simple para disponibles */
+    .employee-badge {
+        background: #e9ecef;
+        color: #495057;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 11px;
+        margin-left: auto;
+    }
+
+    /* Remove button simple */
+    .select2-container--bootstrap .select2-selection__choice__remove {
+        color: white;
+        margin-right: 4px;
+        opacity: 0.8;
+    }
+
+    .select2-container--bootstrap .select2-selection__choice__remove:hover {
+        opacity: 1;
     }
 </style>

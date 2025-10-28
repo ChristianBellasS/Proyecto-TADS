@@ -29,58 +29,34 @@ class SchedulingController extends Controller
 
         return view('admin.scheduling.daily');
     }
-// Obtener datos diarios de programaciones
+    // Obtener datos diarios de programaciones
     public function dailyData(Request $request)
     {
-        /*
-        $query = Scheduling::with(['shift', 'vehicle', 'group.zone']);
-
-        if ($request->start_date && $request->end_date) {
-            $query->whereBetween('date', [$request->start_date, $request->end_date]);
-        }
-
-        $schedulings = $query->get() ?: collect();
-
         try {
-            $data = $schedulings->map(function ($scheduling) {
-                return [
-                    'id' => $scheduling->id,
-                    'date' => $scheduling->date ? $scheduling->date->format('Y-m-d') : 'N/A',
-                    'status' => $scheduling->status ?? 'N/A',
-                    'zone' => optional(optional($scheduling->group)->zone)->name ?? 'N/A',
-                    'shift' => $scheduling->shift->name ?? 'N/A',
-                    'vehicle' => $scheduling->vehicle->name ?? 'N/A',
-                    'group' => $scheduling->group->name ?? 'N/A',
-                ];
-            });
-
-            return response()->json($data);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'error' => true,
-                'message' => $e->getMessage()
-            ], 500);
-        }
-        */
-        try {
-            $startDate = $request->start_date ?? now()->format('Y-m-d');
-            $endDate = $request->end_date ?? now()->addDays(30)->format('Y-m-d');
-
-            $schedulings = Scheduling::with([
+            $query = Scheduling::with([
                 'shift',
                 'vehicle',
                 'groupDetails.employee'
-            ])
-            ->whereBetween('date', [$startDate, $endDate])
-              ->get();
+            ]);
+
+            // SOLO aplicar filtro si el usuario proporciona fechas específicas
+            if ($request->start_date && $request->end_date) {
+                // Usuario proporcionó fechas específicas
+                $query->whereBetween('date', [$request->start_date, $request->end_date]);
+            } else {
+                // Si no hay filtros, mostrar todos los registros ordenados por fecha
+                $query->orderBy('date', 'desc');
+            }
+
+            $schedulings = $query->get();
 
             $data = $schedulings->map(function ($scheduling) {
                 // Obtener información del conductor
                 $driver = $scheduling->groupDetails
                     ->where('role', 'conductor')
                     ->first();
-                
-                $driverName = $driver && $driver->employee 
+
+                $driverName = $driver && $driver->employee
                     ? "{$driver->employee->name} {$driver->employee->last_name}"
                     : 'N/A';
 
@@ -88,7 +64,7 @@ class SchedulingController extends Controller
                 $assistants = $scheduling->groupDetails
                     ->where('role', 'ayudante')
                     ->map(function ($detail) {
-                        return $detail->employee 
+                        return $detail->employee
                             ? "{$detail->employee->name} {$detail->employee->last_name}"
                             : null;
                     })
@@ -110,7 +86,6 @@ class SchedulingController extends Controller
             });
 
             return response()->json($data);
-
         } catch (\Exception $e) {
             return response()->json([
                 'error' => true,
@@ -129,8 +104,8 @@ class SchedulingController extends Controller
                 'vehicle',
                 'groupDetails.employee'
             ])
-            ->orderBy('date', 'desc')
-            ->get();
+                ->orderBy('date', 'desc')
+                ->get();
             dd($schedulings->toArray());
 
 
@@ -460,64 +435,64 @@ class SchedulingController extends Controller
 
         // Obtener el grupo para información adicional
         $employeeGroup = EmployeeGroup::find($validated['employee_group_id']);
-      try{
+        try {
             DB::transaction(function () use ($validated, $employeeGroup) {
-            $startDate = Carbon::parse($validated['start_date']);
-            $endDate = Carbon::parse($validated['end_date']);
+                $startDate = Carbon::parse($validated['start_date']);
+                $endDate = Carbon::parse($validated['end_date']);
 
-            $dayMap = [
-                'Lunes' => 'Monday',
-                'Martes' => 'Tuesday',
-                'Miércoles' => 'Wednesday',
-                'Jueves' => 'Thursday',
-                'Viernes' => 'Friday',
-                'Sábado' => 'Saturday',
-                'Domingo' => 'Sunday'
-            ];
+                $dayMap = [
+                    'Lunes' => 'Monday',
+                    'Martes' => 'Tuesday',
+                    'Miércoles' => 'Wednesday',
+                    'Jueves' => 'Thursday',
+                    'Viernes' => 'Friday',
+                    'Sábado' => 'Saturday',
+                    'Domingo' => 'Sunday'
+                ];
 
-            for ($date = $startDate; $date->lte($endDate); $date->addDay()) {
-                $dayNameEnglish = $date->format('l');
+                for ($date = $startDate; $date->lte($endDate); $date->addDay()) {
+                    $dayNameEnglish = $date->format('l');
 
-                $isWorkDay = collect($validated['work_days'])->contains(function ($spanishDay) use ($dayNameEnglish, $dayMap) {
-                    return $dayMap[$spanishDay] === $dayNameEnglish;
-                });
+                    $isWorkDay = collect($validated['work_days'])->contains(function ($spanishDay) use ($dayNameEnglish, $dayMap) {
+                        return $dayMap[$spanishDay] === $dayNameEnglish;
+                    });
 
-                if ($isWorkDay) {
-                    $scheduling = Scheduling::create([
-                        'group_id' => $validated['employee_group_id'], // Usar group_id del request
-                        'shift_id' => $validated['shift_id'],
-                        'vehicle_id' => $validated['vehicle_id'],
-                        'date' => $date->format('Y-m-d'),
-                        'status' => 'programado',
-                        'notes' => $validated['notes'] ?? "Programación recurrente del grupo: " . ($employeeGroup->name ?? 'N/A')
-                    ]);
+                    if ($isWorkDay) {
+                        $scheduling = Scheduling::create([
+                            'group_id' => $validated['employee_group_id'], // Usar group_id del request
+                            'shift_id' => $validated['shift_id'],
+                            'vehicle_id' => $validated['vehicle_id'],
+                            'date' => $date->format('Y-m-d'),
+                            'status' => 'programado',
+                            'notes' => $validated['notes'] ?? "Programación recurrente del grupo: " . ($employeeGroup->name ?? 'N/A')
+                        ]);
 
-                    // Agregar conductor
-                    GroupDetail::create([
-                        'scheduling_id' => $scheduling->id,
-                        'employee_id' => $validated['driver_id'],
-                        'role' => 'conductor'
-                    ]);
-
-                    // Agregar ayudantes
-                    foreach ($validated['assistant_ids'] as $assistantId) {
+                        // Agregar conductor
                         GroupDetail::create([
                             'scheduling_id' => $scheduling->id,
-                            'employee_id' => $assistantId,
-                            'role' => 'ayudante'
+                            'employee_id' => $validated['driver_id'],
+                            'role' => 'conductor'
                         ]);
+
+                        // Agregar ayudantes
+                        foreach ($validated['assistant_ids'] as $assistantId) {
+                            GroupDetail::create([
+                                'scheduling_id' => $scheduling->id,
+                                'employee_id' => $assistantId,
+                                'role' => 'ayudante'
+                            ]);
+                        }
                     }
                 }
-            }
-        });
+            });
 
-        if ($request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Programación creada exitosamente.'
-            ]);
-        }
-      }catch (\Exception $e) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Programación creada exitosamente.'
+                ]);
+            }
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error al crear la programación: ' . $e->getMessage()
@@ -666,7 +641,7 @@ class SchedulingController extends Controller
 
         if (!$vehicle) {
             $errors[] = "Vehículo no encontrado";
-        // } elseif ($vehicle->status !== 'active') {
+            // } elseif ($vehicle->status !== 'active') {
         } elseif (!$vehicle->status) {
 
             $errors[] = "El vehículo {$vehicle->name} ({$vehicle->plate}) no está activo";
@@ -782,7 +757,7 @@ class SchedulingController extends Controller
                     })
                     // Comente esta linea
                     // ->first();
-                    ->exists();    
+                    ->exists();
 
 
                 if ($existingDriver) {
@@ -949,10 +924,6 @@ class SchedulingController extends Controller
         return $errors;
     }
 
-    // Agregue este método
-        /**
-     * Eliminar programación
-     */
     public function destroy($id)
     {
         try {
@@ -960,7 +931,7 @@ class SchedulingController extends Controller
 
             // Eliminar detalles del grupo primero
             GroupDetail::where('scheduling_id', $id)->delete();
-            
+
             // Eliminar la programación
             $scheduling->delete();
 
@@ -968,7 +939,6 @@ class SchedulingController extends Controller
                 'success' => true,
                 'message' => 'Programación eliminada exitosamente'
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -976,5 +946,80 @@ class SchedulingController extends Controller
             ], 500);
         }
     }
-    //
+
+    /**
+     * Búsqueda de ayudantes disponibles para Select2
+     */
+    public function searchAvailableAssistants(Request $request)
+    {
+        try {
+            $term = $request->get('search', '');
+            $date = $request->get('date', now()->format('Y-m-d'));
+            $excludeEmployees = $request->get('exclude_employees', []);
+            $page = $request->get('page', 1);
+            $perPage = 10;
+
+            $excludeArray = [];
+
+            if (is_array($excludeEmployees)) {
+                foreach ($excludeEmployees as $item) {
+                    if (is_numeric($item)) {
+                        $excludeArray[] = (int)$item;
+                    } elseif (is_string($item) && is_numeric(trim($item))) {
+                        $excludeArray[] = (int)trim($item);
+                    }
+                }
+            } elseif (is_string($excludeEmployees) && !empty($excludeEmployees)) {
+                // Si viene como string separado por comas
+                $parts = explode(',', $excludeEmployees);
+                foreach ($parts as $part) {
+                    if (is_numeric(trim($part))) {
+                        $excludeArray[] = (int)trim($part);
+                    }
+                }
+            }
+
+            $excludeArray = array_unique(array_filter($excludeArray));
+
+            // Empezar con una consulta simple
+            $query = Employee::where('estado', 'activo');
+
+            // Excluir empleados ya seleccionados
+            if (!empty($excludeArray)) {
+                $query->whereNotIn('id', $excludeArray);
+            }
+
+            // Buscar por término
+            if (!empty($term)) {
+                $query->where(function ($q) use ($term) {
+                    $q->where('name', 'LIKE', "%{$term}%")
+                        ->orWhere('last_name', 'LIKE', "%{$term}%");
+                });
+            }
+
+            // Ordenar y paginar
+            $query->orderBy('name')->orderBy('last_name');
+            $employees = $query->paginate($perPage, ['*'], 'page', $page);
+
+            $results = collect($employees->items())->map(function ($employee) {
+                return [
+                    'id' => $employee->id,
+                    'text' => "{$employee->name} {$employee->last_name}",
+                    'name' => $employee->name,
+                    'last_name' => $employee->last_name,
+                ];
+            });
+
+            return response()->json([
+                'results' => $results,
+                'pagination' => ['more' => $employees->hasMorePages()]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'results' => [],
+                'pagination' => ['more' => false],
+                'error' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

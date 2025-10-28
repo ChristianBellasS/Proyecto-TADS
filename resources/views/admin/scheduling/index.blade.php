@@ -55,7 +55,7 @@
                     <div class="form-group">
                         <label>Fecha de inicio</label>
                         <div class="input-group">
-                            <input type="date" class="form-control" id="start_date" value="{{ date('Y-m-d') }}">
+                            <input type="date" class="form-control" id="start_date">
                         </div>
                     </div>
                 </div>
@@ -63,17 +63,21 @@
                     <div class="form-group">
                         <label>Fecha de fin</label>
                         <div class="input-group">
-                            <input type="date" class="form-control" id="end_date"
-                                value="{{ date('Y-m-d', strtotime('+30 days')) }}">
+                            <input type="date" class="form-control" id="end_date">
                         </div>
                     </div>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-4">
                     <div class="form-group">
                         <label>&nbsp;</label>
-                        <button type="button" class="btn btn-info btn-block" id="btnFilter">
-                            <i class="fas fa-filter"></i> Filtrar
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-info btn-block" id="btnFilter">
+                                <i class="fas fa-filter"></i> Filtrar
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-block" id="btnClearFilter">
+                                <i class="fas fa-times"></i> Limpiar
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -228,6 +232,32 @@
             // Filtrar datos
             $('#btnFilter').click(function() {
                 table.ajax.reload();
+            });
+
+            // Limpiar filtros
+            $('#btnClearFilter').click(function() {
+                // Limpiar campos de fecha
+                $('#start_date').val('');
+                $('#end_date').val('');
+
+                // Recargar tabla sin filtros
+                table.ajax.reload();
+
+                // Mostrar mensaje de confirmación
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Filtros limpiados',
+                    text: 'Se han limpiado todos los filtros aplicados',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            });
+
+            // También puedes permitir filtrar con Enter
+            $('#start_date, #end_date').keypress(function(e) {
+                if (e.which == 13) { // Enter key
+                    table.ajax.reload();
+                }
             });
 
             // Abrir modal para crear una nueva programación
@@ -604,6 +634,15 @@
         .btn-sm {
             padding: 0.25rem 0.5rem;
             font-size: 0.75rem;
+        }
+        .gap-2 {
+            gap: 0.5rem !important;
+        }
+        .d-flex.gap-2 .btn {
+            margin: 0;
+        }
+        .btn-block {
+            min-width: auto;
         }
     </style>
 @stop
