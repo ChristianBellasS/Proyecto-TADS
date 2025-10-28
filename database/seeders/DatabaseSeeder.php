@@ -24,6 +24,8 @@ class DatabaseSeeder extends Seeder
             // ProvinceSeeder::class,
             // DistrictSeeder::class,
             UbigeoSeeder::class,
+            // CompleteProgrammingSeeder::class,
+            CompletarDatos::class,
 
         ]);
     }

@@ -29,9 +29,10 @@ class SchedulingController extends Controller
 
         return view('admin.scheduling.daily');
     }
-
+// Obtener datos diarios de programaciones
     public function dailyData(Request $request)
     {
+        /*
         $query = Scheduling::with(['shift', 'vehicle', 'group.zone']);
 
         if ($request->start_date && $request->end_date) {
@@ -60,6 +61,62 @@ class SchedulingController extends Controller
                 'message' => $e->getMessage()
             ], 500);
         }
+        */
+        try {
+            $startDate = $request->start_date ?? now()->format('Y-m-d');
+            $endDate = $request->end_date ?? now()->addDays(30)->format('Y-m-d');
+
+            $schedulings = Scheduling::with([
+                'shift',
+                'vehicle',
+                'groupDetails.employee'
+            ])
+            ->whereBetween('date', [$startDate, $endDate])
+              ->get();
+
+            $data = $schedulings->map(function ($scheduling) {
+                // Obtener información del conductor
+                $driver = $scheduling->groupDetails
+                    ->where('role', 'conductor')
+                    ->first();
+                
+                $driverName = $driver && $driver->employee 
+                    ? "{$driver->employee->name} {$driver->employee->last_name}"
+                    : 'N/A';
+
+                // Obtener información de ayudantes
+                $assistants = $scheduling->groupDetails
+                    ->where('role', 'ayudante')
+                    ->map(function ($detail) {
+                        return $detail->employee 
+                            ? "{$detail->employee->name} {$detail->employee->last_name}"
+                            : null;
+                    })
+                    ->filter()
+                    ->implode(', ');
+
+                return [
+                    'id' => $scheduling->id,
+                    'date' => $scheduling->date->format('Y-m-d'),
+                    'status' => $scheduling->status,
+                    'zone_name' => 'Zona General', // Puedes ajustar esto según tu estructura
+                    'shift_name' => $scheduling->shift->name ?? 'N/A',
+                    'vehicle_name' => $scheduling->vehicle->name ?? 'N/A',
+                    'vehicle_plate' => $scheduling->vehicle->plate ?? 'N/A',
+                    'group_name' => "{$driverName}" . ($assistants ? " + {$assistants}" : ''),
+                    'driver_name' => $driverName,
+                    'assistants' => $assistants
+                ];
+            });
+
+            return response()->json($data);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => true,
+                'message' => 'Error al cargar los datos: ' . $e->getMessage()
+            ], 500);
+        }
     }
     /**
      * Lista de programaciones para el CRUD (admin/scheduling)
@@ -71,7 +128,11 @@ class SchedulingController extends Controller
                 'shift',
                 'vehicle',
                 'groupDetails.employee'
-            ])->get();
+            ])
+            ->orderBy('date', 'desc')
+            ->get();
+            dd($schedulings->toArray());
+
 
             // Asegurar que siempre tenemos una colección
             $schedulings = $schedulings ?: collect();
@@ -393,8 +454,8 @@ class SchedulingController extends Controller
 
         // Obtener el grupo para información adicional
         $employeeGroup = EmployeeGroup::find($validated['employee_group_id']);
-
-        DB::transaction(function () use ($validated, $employeeGroup) {
+      try{
+            DB::transaction(function () use ($validated, $employeeGroup) {
             $startDate = Carbon::parse($validated['start_date']);
             $endDate = Carbon::parse($validated['end_date']);
 
@@ -417,6 +478,7 @@ class SchedulingController extends Controller
 
                 if ($isWorkDay) {
                     $scheduling = Scheduling::create([
+                        'group_id' => $validated['employee_group_id'], // Usar group_id del request
                         'shift_id' => $validated['shift_id'],
                         'vehicle_id' => $validated['vehicle_id'],
                         'date' => $date->format('Y-m-d'),
@@ -449,7 +511,16 @@ class SchedulingController extends Controller
                 'message' => 'Programación creada exitosamente.'
             ]);
         }
-        return redirect()->route('admin.schedulings.index')->with('success', 'Programación creada exitosamente.');
+      }catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear la programación: ' . $e->getMessage()
+            ], 500);
+        }
+
+
+        //Comente esta linea
+        // return redirect()->route('admin.schedulings.index')->with('success', 'Programación creada exitosamente.');
     }
 
     public function edit($id)
@@ -479,7 +550,7 @@ class SchedulingController extends Controller
         $suggestions = array_merge($suggestions, $employeeValidation['suggestions']);
 
         // 2. Validar vehículo activo
-        $vehicleValidation = $this->validateVehicle($data['vehicle_id'], $data['zone_id']);
+        $vehicleValidation = $this->validateVehicle($data['vehicle_id']); //Le quité zone_id , $data['zone_id']
         $errors = array_merge($errors, $vehicleValidation['errors']);
         $suggestions = array_merge($suggestions, $vehicleValidation['suggestions']);
 
@@ -543,8 +614,16 @@ class SchedulingController extends Controller
                     $validation = $employee->canBeScheduled($current);
 
                     if (!$validation['can_be_scheduled']) {
-                        $errors[] = "{$employee->full_name}: {$validation['error']}";
-
+                        // $errors[] = "{$employee->full_name}: {$validation['error']}";
+                        // Comente la línea anterior y use la siguiente para incluir la fecha
+                        $errors[] = "{$employee->full_name} - {$current->format('d/m/Y')}: {$validation['error']}";
+                        // Agregue la linea de buscar reemplazo aquí
+                        // Buscar reemplazo
+                        $replacement = $this->findReplacementEmployee($employee, $current, $data['zone_id']);
+                        if ($replacement) {
+                            $suggestions[] = "Sugerencia: Reemplazar a {$employee->full_name} con {$replacement->full_name} el {$current->format('d/m/Y')}";
+                        }
+                        /*
                         // Agregar sugerencia para empleados de reemplazo
                         if ($validation['error_type'] === 'vacation' || $validation['error_type'] === 'contract') {
                             $replacement = $this->findReplacementEmployee($employee, $current, $data['zone_id']);
@@ -553,6 +632,7 @@ class SchedulingController extends Controller
                             }
                         }
                         break 2; // Salir de ambos bucles al primer error por empleado
+                        */
                     }
                 }
 
@@ -569,23 +649,31 @@ class SchedulingController extends Controller
     /**
      * Validación 2: Vehículo activo con sugerencias de reemplazo
      */
-    private function validateVehicle($vehicleId, $zoneId)
+    // private function validateVehicle($vehicleId, $zoneId)
+    private function validateVehicle($vehicleId)
     {
         $errors = [];
         $suggestions = [];
-        $vehicle = Vehicle::with('zones')->find($vehicleId);
+        // $vehicle = Vehicle::with('zones')->find($vehicleId);
+        $vehicle = Vehicle::find($vehicleId);
+
 
         if (!$vehicle) {
             $errors[] = "Vehículo no encontrado";
-        } elseif ($vehicle->status !== 'active') {
+        // } elseif ($vehicle->status !== 'active') {
+        } elseif (!$vehicle->status) {
+
             $errors[] = "El vehículo {$vehicle->name} ({$vehicle->plate}) no está activo";
 
             // Buscar vehículos alternativos en la misma zona usando la tabla pivote
             $alternativeVehicles = Vehicle::where('status', 'active')
                 ->where('id', '!=', $vehicleId)
+                //Comente esto
+                /*
                 ->whereHas('zones', function ($query) use ($zoneId) {
                     $query->where('zones.id', $zoneId); // Especificar la tabla
                 })
+                    */
                 ->get();
 
             if ($alternativeVehicles->count() > 0) {
@@ -612,9 +700,13 @@ class SchedulingController extends Controller
     {
         return Employee::where('id', '!=', $originalEmployee->id)
             ->where('estado', 'activo') // ← CORRECTO: 'estado' no 'status'
+            // Agregue esta linea 
+            // Comente esto
+            /*
             ->whereHas('employeeGroups', function ($query) use ($zoneId) {
                 $query->where('zone_id', $zoneId);
             })
+            */
             ->whereDoesntHave('vacations', function ($query) use ($date) {
                 $query->where('start_date', '<=', $date)
                     ->where('end_date', '>=', $date)
@@ -662,9 +754,13 @@ class SchedulingController extends Controller
 
                 // Validar duplicado de turno y vehículo
                 $existingScheduling = Scheduling::where('date', $dateString)
-                    ->where('shift_id', $data['shift_id'])
+                    // Comente esta linea
+                    // ->where('shift_id', $data['shift_id'])
                     ->where('vehicle_id', $data['vehicle_id'])
-                    ->first();
+                    // Comente esta linea
+                    // ->first();
+                    ->exists();
+
 
                 if ($existingScheduling) {
                     $errors[] = "Ya existe una programación para el {$date->format('d/m/Y')} con el mismo turno y vehículo";
@@ -672,12 +768,16 @@ class SchedulingController extends Controller
 
                 // Validar duplicado de conductor
                 $existingDriver = Scheduling::where('date', $dateString)
-                    ->where('shift_id', $data['shift_id'])
+                    // Comente esta linea
+                    // ->where('shift_id', $data['shift_id'])
                     ->whereHas('groupDetails', function ($query) use ($data) {
                         $query->where('employee_id', $data['driver_id'])
                             ->where('role', 'conductor');
                     })
-                    ->first();
+                    // Comente esta linea
+                    // ->first();
+                    ->exists();    
+
 
                 if ($existingDriver) {
                     $driver = Employee::find($data['driver_id']);
@@ -687,12 +787,15 @@ class SchedulingController extends Controller
                 // Validar duplicado de ayudantes
                 foreach ($data['assistant_ids'] as $assistantId) {
                     $existingAssistant = Scheduling::where('date', $dateString)
-                        ->where('shift_id', $data['shift_id'])
+                        // Comente esta linea
+                        // ->where('shift_id', $data['shift_id'])
                         ->whereHas('groupDetails', function ($query) use ($assistantId) {
                             $query->where('employee_id', $assistantId)
                                 ->where('role', 'ayudante');
                         })
-                        ->first();
+                        // Comente esta linea
+                        // ->first();
+                        ->exists();
 
                     if ($existingAssistant) {
                         $assistant = Employee::find($assistantId);
@@ -755,7 +858,9 @@ class SchedulingController extends Controller
             'driver_id' => $request->employee_ids[0],
             'assistant_ids' => array_slice($request->employee_ids, 1),
             'vehicle_id' => $request->vehicle_id,
-            'zone_id' => $request->zone_id
+            'zone_id' => $request->zone_id,
+            'shift_id' => $request->shift_id // Agregar shift_id si está disponible - Lo acabo de agregar
+
         ];
 
         $validationResult = $this->validateScheduling($testData);
@@ -837,4 +942,33 @@ class SchedulingController extends Controller
 
         return $errors;
     }
+
+    // Agregue este método
+        /**
+     * Eliminar programación
+     */
+    public function destroy($id)
+    {
+        try {
+            $scheduling = Scheduling::findOrFail($id);
+
+            // Eliminar detalles del grupo primero
+            GroupDetail::where('scheduling_id', $id)->delete();
+            
+            // Eliminar la programación
+            $scheduling->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Programación eliminada exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar la programación: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    //
 }

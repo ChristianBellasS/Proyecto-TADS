@@ -12,26 +12,30 @@ class EmployeeGroup extends Model
     protected $table = 'employeegroups';
 
     protected $guarded = [];
-
+    // Relación con zona
     public function zone()
     {
         return $this->belongsTo(Zone::class);
     }
+    // Relación con turno
 
     public function shift()
     {
         return $this->belongsTo(Shift::class);
     }
+    // Relación con vehículo
 
     public function vehicle()
     {
         return $this->belongsTo(Vehicle::class);
     }
+    // Relación con conductor
 
     public function driver()
     {
         return $this->belongsTo(Employee::class, 'driver_id');
     }
+    // Relaciones con ayudantes
 
     public function assistant1()
     {
@@ -61,6 +65,7 @@ class EmployeeGroup extends Model
     // Método para obtener todos los ayudantes
     public function getAssistantsAttribute()
     {
+        /*
         $assistants = [];
         for ($i = 1; $i <= 5; $i++) {
             $assistant = $this->{"assistant{$i}"};
@@ -69,6 +74,17 @@ class EmployeeGroup extends Model
             }
         }
         return collect($assistants);
+        */
+        $assistants = collect();
+        
+        for ($i = 1; $i <= 5; $i++) {
+            $assistant = $this->{"assistant{$i}"};
+            if ($assistant) {
+                $assistants->push($assistant);
+            }
+        }
+        
+        return $assistants;
     }
 
     public function configEmployees()
@@ -91,5 +107,29 @@ class EmployeeGroup extends Model
     public function getConfigEmployeesCountAttribute()
     {
         return $this->configEmployees()->count();
+    }
+    // Nuevo código aquí
+        // Obtener todos los empleados del grupo (conductor + ayudantes)
+    public function getAllEmployeesAttribute()
+    {
+        $employees = collect();
+        
+        if ($this->driver) {
+            $employees->push($this->driver);
+        }
+        
+        return $employees->merge($this->assistants);
+    }
+
+    // Verificar si el grupo está completo (conductor + al menos 1 ayudante)
+    public function getIsCompleteAttribute()
+    {
+        return $this->driver && $this->assistants->count() >= 1;
+    }
+
+    // Scope para grupos activos
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
     }
 }

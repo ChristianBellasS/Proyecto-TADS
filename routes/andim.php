@@ -135,8 +135,8 @@ Route::post('/registrar-asistencia', [AttendanceController::class, 'register'])-
 
 // Agregar estas rutas dentro del grupo de admin/contracts
 Route::get('admin/contracts/get-all-employees', [ContractController::class, 'getAllEmployees'])->name('admin.contracts.get-all-employees');
-Route::get('admin/contracts/get-departments', [ContractController::class, 'getDepartments'])->name('admin.contracts.get-departments');
-Route::get('contracts/check-last-temporal', [ContractController::class, 'checkLastTemporalContract'])->name('admin.contracts.check-last-temporal');
+// Route::get('admin/contracts/get-departments', [ContractController::class, 'getDepartments'])->name('admin.contracts.get-departments');
+// Route::get('contracts/check-last-temporal', [ContractController::class, 'checkLastTemporalContract'])->name('admin.contracts.check-last-temporal');
 
 
 // Rutas para buscar empleados en el modulo de turnos
@@ -148,6 +148,15 @@ Route::get('/scheduling', [SchedulingController::class, 'index'])->name('admin.s
 Route::get('/scheduling/create', [SchedulingController::class, 'create'])->name('admin.scheduling.create');
 Route::post('/scheduling/store', [SchedulingController::class, 'store'])->name('admin.scheduling.store');
 
+// Agregue esta ruta para datos diarios
+Route::get('scheduling/daily', [SchedulingController::class, 'daily'])->name('admin.scheduling.daily');
+//
+
+// Agregue esta nueva ruta 
+Route::delete('scheduling/{id}', [SchedulingController::class, 'destroy'])->name('admin.scheduling.destroy');
+
+//
+
 Route::get('/scheduling/daily-data', [SchedulingController::class, 'dailyData'])
     ->name('admin.scheduling.daily-data');
 
@@ -158,14 +167,16 @@ Route::get('/scheduling/{id}/edit', [SchedulingController::class, 'edit'])
 Route::get('/scheduling/search-employee-groups', [SchedulingController::class, 'searchEmployeeGroups'])
     ->name('admin.scheduling.search-employee-groups');
 
-Route::post('/admin/scheduling/check-availability', [SchedulingController::class, 'checkAvailability'])->name('admin.scheduling.check-availability');
-Route::get('/admin/scheduling/group-data/{groupId}', [SchedulingController::class, 'getGroupData']);
-
+Route::post('scheduling/check-availability', [SchedulingController::class, 'checkAvailability'])->name('admin.scheduling.check-availability');
+// Comente esta ruta duplicada
+// Route::get('/admin/scheduling/group-data/{groupId}', [SchedulingController::class, 'getGroupData']);
+Route::get('scheduling/group-data/{groupId}', [SchedulingController::class, 'getGroupData'])->name('admin.scheduling.group-data');
+//
 // Ruta para obtener datos de un grupo específico
 Route::get('/scheduling/group-data/{groupId}', [SchedulingController::class, 'getGroupData'])
     ->name('admin.scheduling.group-data');
 
 // Otras rutas de scheduling
 Route::get('/scheduling/zone-data/{zone}', [SchedulingController::class, 'getZoneData'])->name('admin.scheduling.zone-data');
-Route::post('/scheduling/check-availability', [SchedulingController::class, 'checkAvailability'])->name('admin.scheduling.check-availability');
+// Route::post('/scheduling/check-availability', [SchedulingController::class, 'checkAvailability'])->name('admin.scheduling.check-availability');
 Route::post('/scheduling/bulk-update', [SchedulingController::class, 'bulkUpdate'])->name('admin.scheduling.bulk-update');

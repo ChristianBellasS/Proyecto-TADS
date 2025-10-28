@@ -23,6 +23,16 @@ class Contract extends Model
         'termination_reason',
     ];
 
+    // Agregar casts para fechas y booleanos
+
+    protected $casts = [
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'is_active' => 'boolean',
+        'salary' => 'decimal:2'
+    ];
+
+
     // Relaciones
     public function employee() {
         return $this->belongsTo(Employee::class);
@@ -34,5 +44,24 @@ class Contract extends Model
 
     public function department() {
         return $this->belongsTo(Department::class);
+    }
+
+    // Nuevo código aquí
+    // Scope para contratos activos
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    // Scope para contratos vigentes en una fecha
+    public function scopeValidOnDate($query, $date = null)
+    {
+        $date = $date ?: now();
+        
+        return $query->where('start_date', '<=', $date)
+            ->where(function($q) use ($date) {
+                $q->whereNull('end_date')
+                  ->orWhere('end_date', '>=', $date);
+            });
     }
 }

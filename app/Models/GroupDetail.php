@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 class GroupDetail extends Model
 {
     use HasFactory;
+    protected $table = 'groupdetails'; // 👈 especifica el nombre real
+
 
     protected $fillable = ['employee_id', 'scheduling_id', 'role'];
 

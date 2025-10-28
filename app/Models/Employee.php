@@ -201,7 +201,7 @@ class Employee extends Authenticatable
 
     public function schedulings()
     {
-        return $this->belongsToMany(Scheduling::class, 'groupdetails', 'employee_id', 'scheduling_id');
+        return $this->belongsToMany(Scheduling::class, 'group_details', 'employee_id', 'scheduling_id');
     }
 
     public function attendances()
@@ -296,7 +296,7 @@ class Employee extends Authenticatable
         return $this->vacations()
             ->where('start_date', '<=', $date)
             ->where('end_date', '>=', $date)
-            ->where('status', 'approved')
+            ->where('status', 'Approved') // Cambie a 'approved' por 'Approved'
             ->exists();
     }
 
@@ -309,11 +309,22 @@ class Employee extends Authenticatable
 
         // 1. Validar contrato activo
         if (!$this->isActiveContract($date)) {
+            /*
             return [
                 'can_be_scheduled' => false,
                 'error' => 'No tiene contrato activo para la fecha ' . $date->format('d/m/Y'),
                 'error_type' => 'contract'
             ];
+            */
+            // Nuevo código para permitir programación sin contrato activo
+            return $this->contracts()
+            ->where('is_active', true)
+            ->where('start_date', '<=', $date)
+            ->where(function($query) use ($date) {
+                $query->whereNull('end_date')
+                      ->orWhere('end_date', '>=', $date);
+            })
+            ->exists();
         }
 
         // 2. Validar vacaciones
@@ -324,6 +335,16 @@ class Employee extends Authenticatable
                 'error_type' => 'vacation'
             ];
         }
+        // Inicio de nuevo código
+        if ($this->estado !== 'activo') {
+            return [
+                // 'can_be_scheduled' => false, // Cambie esto a true para permitir la programación
+                'can_be_scheduled' => true,
+                'error' => 'Empleado inactivo',
+                'error_type' => 'status'
+            ];
+        }
+        // FIn de nuevo código
 
         return [
             'can_be_scheduled' => true,
@@ -365,7 +386,7 @@ class Employee extends Authenticatable
     public function scopeAvailableForDate($query, $date)
     {
         $date = Carbon::parse($date);
-
+        /*
         return $query->whereHas('contracts', function ($q) use ($date) {
             $q->where('is_active', true)
                 ->where('start_date', '<=', $date)
@@ -378,6 +399,23 @@ class Employee extends Authenticatable
                 $q->where('start_date', '<=', $date)
                     ->where('end_date', '>=', $date)
                     ->where('status', 'approved');
+            });
+
+        */
+        // Nuevo código para considerar estado activo        
+        return $query->where('estado', 'activo')
+            ->whereHas('contracts', function($q) use ($date) {
+                $q->where('is_active', true)
+                  ->where('start_date', '<=', $date)
+                  ->where(function($query) use ($date) {
+                      $query->whereNull('end_date')
+                            ->orWhere('end_date', '>=', $date);
+                  });
+            })
+            ->whereDoesntHave('vacations', function($q) use ($date) {
+                $q->where('status', 'Approved')
+                  ->where('start_date', '<=', $date)
+                  ->where('end_date', '>=', $date);
             });
     }
 }
