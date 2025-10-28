@@ -187,5 +187,8 @@ Route::get('/scheduling/search-available-assistants', [SchedulingController::cla
 Route::get('/scheduling/search-available-drivers', [SchedulingController::class, 'searchAvailableDrivers'])
     ->name('admin.scheduling.search-available-drivers');
 
+Route::get('/scheduling/group-details/{groupId}', [SchedulingController::class, 'getGroupDetails'])
+    ->name('admin.scheduling.group-details');
+
 //TURNOS
 Route::resource('shifts', ShiftController::class)->names('admin.shifts');

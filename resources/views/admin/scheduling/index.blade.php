@@ -44,6 +44,31 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal para Ver Detalles del Grupo -->
+    <div class="modal fade" id="modalViewGroup" tabindex="-1" role="dialog" aria-labelledby="modalViewGroupLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #035286, #034c7c);">
+                    <h5 class="modal-title font-weight-bold" id="modalViewGroupLabel">
+                        <i class="fas fa-users mr-2 text-warning"></i> Detalles del Grupo
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true" class="h5 mb-0">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body p-4" id="modalViewGroupBody">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Cargando...</span>
+                        </div>
+                        <p class="mt-2">Cargando detalles del grupo...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 @stop
 
 @section('content')
@@ -533,11 +558,44 @@
             $(document).on('click', '.btn-view-group', function() {
                 var id = $(this).data('id');
 
-                Swal.fire({
-                    title: "Detalles del Grupo",
-                    text: "Mostrando información del personal asignado a esta programación",
-                    icon: "info",
-                    confirmButtonText: "Cerrar"
+                // Mostrar modal de carga
+                $('#modalViewGroupBody').html(`
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Cargando...</span>
+            </div>
+            <p class="mt-2">Cargando detalles del grupo...</p>
+        </div>
+    `);
+                $('#modalViewGroup').modal('show');
+
+                // Cargar detalles del grupo
+                $.ajax({
+                    url: "{{ url('admin/scheduling/group-details') }}/" + id,
+                    type: "GET",
+                    success: function(response) {
+                        if (response.success) {
+                            $('#modalViewGroupBody').html(response.html);
+                            $('#modalViewGroupLabel').html(`
+                    <i class="fas fa-users mr-2 text-warning"></i> Detalles del Grupo
+                `);
+                        } else {
+                            $('#modalViewGroupBody').html(`
+                    <div class="alert alert-danger text-center">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        ${response.message || 'Error al cargar los detalles del grupo'}
+                    </div>
+                `);
+                        }
+                    },
+                    error: function(xhr) {
+                        $('#modalViewGroupBody').html(`
+                <div class="alert alert-danger text-center">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    Error al cargar los detalles del grupo
+                </div>
+            `);
+                    }
                 });
             });
 

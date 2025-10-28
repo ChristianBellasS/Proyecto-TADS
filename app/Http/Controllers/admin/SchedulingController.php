@@ -421,7 +421,6 @@ class SchedulingController extends Controller
             $endDate = Carbon::createFromFormat('Y-m-d', $validated['end_date'], 'America/Lima')
                 ->startOfDay()
                 ->setTimezone('UTC');
-                
         } catch (\Exception $e) {
             try {
                 $startDate = Carbon::createFromFormat('d/m/Y', $validated['start_date'], 'America/Lima')
@@ -508,7 +507,6 @@ class SchedulingController extends Controller
                         }
                     }
                 }
-
             });
 
             if ($request->ajax()) {
@@ -1136,6 +1134,70 @@ class SchedulingController extends Controller
                 'results' => [],
                 'pagination' => ['more' => false],
                 'error' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener detalles de un grupo para mostrar en modal
+     */
+    public function getGroupDetails($schedulingId)
+    {
+        try {
+            // Primero obtener la programación con sus relaciones
+            $scheduling = Scheduling::with([
+                'group.zone',
+                'group.shift',
+                'group.vehicle',
+                'group.driver',
+                'group.assistant1',
+                'group.assistant2',
+                'group.assistant3',
+                'group.assistant4',
+                'group.assistant5',
+                'groupDetails.employee'
+            ])->find($schedulingId);
+
+            if (!$scheduling) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Programación no encontrada'
+                ], 404);
+            }
+
+            // Si hay un grupo asignado, usarlo
+            if ($scheduling->group) {
+                $group = $scheduling->group;
+            } else {
+                $group = (object)[
+                    'name' => 'Grupo Temporal - Programación #' . $scheduling->id,
+                    'zone' => $scheduling->zone ?? null,
+                    'shift' => $scheduling->shift ?? null,
+                    'vehicle' => $scheduling->vehicle ?? null,
+                    'days' => 'Lunes,Martes,Miércoles,Jueves,Viernes,Sábado',
+                    'status' => 'active',
+                    'driver' => null,
+                    'assistant1' => null,
+                    'assistant2' => null,
+                    'assistant3' => null,
+                    'assistant4' => null,
+                    'assistant5' => null
+                ];
+            }
+
+            $view = view('admin.scheduling.templates.group-details', [
+                'group' => $group,
+                'scheduling' => $scheduling
+            ])->render();
+
+            return response()->json([
+                'success' => true,
+                'html' => $view
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cargar los detalles del grupo: ' . $e->getMessage()
             ], 500);
         }
     }
