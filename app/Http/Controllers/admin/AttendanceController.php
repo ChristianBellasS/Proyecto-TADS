@@ -67,6 +67,7 @@ class AttendanceController extends Controller
 
     public function create(Request $request)
     {
+
         $employeeId = $request->get('employee_id');
         $attendanceDate = $request->get('attendance_date', now()->format('Y-m-d'));
 
@@ -115,7 +116,7 @@ class AttendanceController extends Controller
             'attendance_time' => 'required|date_format:H:i',
             'type' => 'required|in:ENTRADA,SALIDA',
             'status' => 'required|integer|min:1|max:2',
-            'notes' => 'nullable|string'
+            'notes' => 'nullable|string',
         ]);
 
         $attendanceDateTime = $validated['attendance_date'] . ' ' . $validated['attendance_time'];
@@ -314,5 +315,61 @@ class AttendanceController extends Controller
         return response()->json([
             'records' => $records
         ]);
+    }
+
+  // Métodos para vistas públicas
+    public function __construct()
+    {
+        // Aplicar middleware solo a métodos de admin, excluyendo los públicos
+        $this->middleware('auth:web')->except(['createPublic', 'storePublic', 'searchEmployees', 'getDayRecords']);
+    }
+
+    public function createPublic(Request $request)
+    {
+        $employeeId = $request->get('employee_id');
+        $attendanceDate = $request->get('attendance_date', now()->format('Y-m-d'));
+
+        $suggestedType = 'ENTRADA';
+        $isTypeLocked = false;
+        $lastAttendance = null;
+
+        if ($employeeId) {
+            // Buscar registros del empleado para la fecha seleccionada
+            $existingAttendances = Attendance::where('employee_id', $employeeId)
+                ->whereDate('attendance_date', $attendanceDate)
+                ->orderBy('attendance_date', 'asc')
+                ->get();
+
+            $hasEntry = $existingAttendances->where('type', 'ENTRADA')->count() > 0;
+            $hasExit = $existingAttendances->where('type', 'SALIDA')->count() > 0;
+
+            if (!$hasEntry) {
+                $suggestedType = 'ENTRADA';
+                $isTypeLocked = true;
+            } elseif ($hasEntry && !$hasExit) {
+                $suggestedType = 'SALIDA';
+                $isTypeLocked = true;
+            } else {
+                $suggestedType = 'ENTRADA';
+                $isTypeLocked = false;
+            }
+
+            $lastAttendance = $existingAttendances->last();
+        }
+
+        // Usar vista pública
+        return view('public.attendances.create', compact(
+            'suggestedType',
+            'isTypeLocked',
+            'employeeId',
+            'attendanceDate',
+            'lastAttendance'
+        ));
+    }
+
+    public function storePublic(Request $request)
+    {
+        // Reutilizar la misma lógica del store normal
+        return $this->store($request);
     }
 }

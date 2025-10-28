@@ -34,9 +34,15 @@ class RouteServiceProvider extends ServiceProvider
             Route::middleware('web')
                 ->group(base_path('routes/web.php'));
 
+            // ✅ Aquí agregas las rutas públicas SIN autenticación
+            Route::middleware('web')
+                ->group(base_path('routes/public.php'));
+
             Route::middleware('web', 'auth')
                 ->prefix('admin')
                 ->group(base_path('routes/andim.php'));
+
+            
         });
     }
 

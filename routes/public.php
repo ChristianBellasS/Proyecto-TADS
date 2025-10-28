@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\admin\AttendanceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,22 +14,11 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
-
-Route::middleware([
-    'auth:sanctum',
-    config('jetstream.auth_session'),
-    'verified',
-])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
-});
-
 Route::prefix('public')->group(function () {
     Route::get('attendances', [AttendanceController::class, 'createPublic'])->name('public.attendances.create');
     Route::post('attendances', [AttendanceController::class, 'storePublic'])->name('public.attendances.store');
     Route::get('attendances/search-employees', [AttendanceController::class, 'searchEmployees'])->name('public.attendances.search-employees');
+    Route::get('attendances/day-records', [AttendanceController::class, 'getDayRecords'])
+    ->name('public.attendances.day-records');
+
 });
