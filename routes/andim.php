@@ -173,11 +173,6 @@ Route::post('scheduling/check-availability', [SchedulingController::class, 'chec
 // Comente esta ruta duplicada
 // Route::get('/admin/scheduling/group-data/{groupId}', [SchedulingController::class, 'getGroupData']);
 Route::get('scheduling/group-data/{groupId}', [SchedulingController::class, 'getGroupData'])->name('admin.scheduling.group-data');
-//
-// Ruta para obtener datos de un grupo específico
-Route::get('/scheduling/group-data/{groupId}', [SchedulingController::class, 'getGroupData'])
-    ->name('admin.scheduling.group-data');
-
 // Otras rutas de scheduling
 Route::get('/scheduling/zone-data/{zone}', [SchedulingController::class, 'getZoneData'])->name('admin.scheduling.zone-data');
 // Route::post('/scheduling/check-availability', [SchedulingController::class, 'checkAvailability'])->name('admin.scheduling.check-availability');
@@ -188,6 +183,12 @@ Route::post('/scheduling/bulk-update', [SchedulingController::class, 'bulkUpdate
 //
 Route::get('/scheduling/search-available-assistants', [SchedulingController::class, 'searchAvailableAssistants'])
     ->name('admin.scheduling.search-available-assistants');
+
+Route::get('/scheduling/search-available-drivers', [SchedulingController::class, 'searchAvailableDrivers'])
+    ->name('admin.scheduling.search-available-drivers');
+
+Route::get('/scheduling/group-details/{groupId}', [SchedulingController::class, 'getGroupDetails'])
+    ->name('admin.scheduling.group-details');
 
 //TURNOS
 Route::resource('shifts', ShiftController::class)->names('admin.shifts');

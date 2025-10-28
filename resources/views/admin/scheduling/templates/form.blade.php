@@ -9,11 +9,13 @@
 <div class="form-row">
     <div class="form-group col-md-4">
         <label>Fecha de inicio *</label>
-        {!! Form::date('start_date', null, ['class' => 'form-control', 'required']) !!}
+        <input type="date" name="start_date" class="form-control" required pattern="\d{2}/\d{2}/\d{4}"
+            placeholder="DD/MM/YYYY">
     </div>
     <div class="form-group col-md-4">
         <label>Fecha de fin *</label>
-        {!! Form::date('end_date', null, ['class' => 'form-control', 'required']) !!}
+        <input type="date" name="end_date" class="form-control" required pattern="\d{2}/\d{2}/\d{4}"
+            placeholder="DD/MM/YYYY">
     </div>
     <div class="form-group col-md-4">
         <label>&nbsp;</label>
@@ -193,6 +195,41 @@
             validateAll();
         });
 
+        /* $('#schedulingForm').on('submit', function(e) {
+            e.preventDefault();
+
+            // Convertir fechas de YYYY-MM-DD a DD/MM/YYYY
+            const startDateInput = $('input[name="start_date"]');
+            const endDateInput = $('input[name="end_date"]');
+
+            const startDateValue = startDateInput.val();
+            const endDateValue = endDateInput.val();
+
+            if (startDateValue && endDateValue) {
+                // Convertir formato YYYY-MM-DD a DD/MM/YYYY
+                const startDateConverted = convertDateFormat(startDateValue);
+                const endDateConverted = convertDateFormat(endDateValue);
+
+                // Reemplazar los valores originales con los convertidos
+                startDateInput.val(startDateConverted);
+                endDateInput.val(endDateConverted);
+
+                // Enviar formulario
+                this.submit();
+            } else {
+                showError('Las fechas son requeridas');
+            }
+        });
+
+        // Función para convertir YYYY-MM-DD a DD/MM/YYYY
+        function convertDateFormat(dateString) {
+            const parts = dateString.split('-');
+            if (parts.length === 3) {
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+            return dateString;
+        } */
+
         // Función para validar todo
         function validateAll() {
             const startDate = $('input[name="start_date"]').val();
@@ -267,7 +304,7 @@
             });
         }
 
-        // Funciones auxiliares - CORREGIDAS
+        // Funciones auxiliares
         function showLoading() {
             $('#group_info').hide();
             $('#driver_select').html('<option value="">Cargando...</option>').prop('disabled', true);
@@ -291,16 +328,21 @@
             $('#hidden_shift_id').val(group.shift_id);
             $('#hidden_vehicle_id').val(group.vehicle_id);
 
-            // Llenar conductor
-            $('#driver_select').empty().prop('disabled', false);
-            if (driver && driver.id) {
-                $('#driver_select').append(new Option(driver.names, driver.id, true, true));
-            }
+            // Inicializar Select2 para conductor
+            initializeDriverSelect();
+
+            // Establecer conductor después de inicializar Select2
+            setTimeout(() => {
+                if (driver && driver.id) {
+                    const option = new Option(driver.names, driver.id, true, true);
+                    $('#driver_select').append(option).trigger('change');
+                }
+            }, 500);
 
             // Limpiar contenedor de ayudantes
             $('#assistantsContainer').empty();
 
-            // CORRECCIÓN: Crear selects VACÍOS para que carguen sugerencias
+            // Crear selects para ayudantes
             assistants.forEach((assistant, index) => {
                 const requiredAttr = index === 0 ? 'required' : '';
                 const selectHtml = `
@@ -317,20 +359,19 @@
             // Inicializar Select2 para ayudantes
             initializeAssistantSelects();
 
-            // CORRECCIÓN: Establecer valores después de inicializar Select2
+            // Establecer ayudantes después de inicializar Select2
             setTimeout(() => {
                 assistants.forEach((assistant, index) => {
                     if (assistant && assistant.id) {
                         const $select = $('.assistant-select').eq(index);
                         if ($select.length) {
-                            // Crear y seleccionar la opción
                             const option = new Option(assistant.names, assistant.id, true,
                                 true);
                             $select.append(option).trigger('change');
                         }
                     }
                 });
-            }, 800); // Dar tiempo a que Select2 se inicialice
+            }, 800);
 
             // Marcar los días de trabajo
             $('.day-checkbox').prop('checked', false);
@@ -341,48 +382,96 @@
             $('#group_info').show();
         }
 
+        function initializeDriverSelect() {
+            // Destruir Select2 si ya está inicializado
+            if ($('#driver_select').hasClass('select2-hidden-accessible')) {
+                $('#driver_select').select2('destroy');
+            }
+
+            // Limpiar opciones existentes
+            $('#driver_select').empty().prop('disabled', false);
+
+            // Inicializar Select2 para conductor
+            $('#driver_select').select2({
+                theme: 'bootstrap',
+                width: '100%',
+                dropdownParent: $('#modalProgramacion'),
+                placeholder: 'Buscar conductor disponible...',
+                allowClear: true,
+                ajax: {
+                    url: '{{ route('admin.scheduling.search-available-drivers') }}',
+                    type: 'GET',
+                    dataType: 'json',
+                    delay: 300,
+                    data: function(params) {
+                        const data = {
+                            search: params.term,
+                            date: $('input[name="start_date"]').val() ||
+                                '{{ now()->format('Y-m-d') }}',
+                            exclude_employees: getCurrentEmployeeIds(),
+                            _token: '{{ csrf_token() }}'
+                        };
+                        return data;
+                    },
+                    processResults: function(data) {
+                        return {
+                            results: data.results || [],
+                            pagination: data.pagination || {
+                                more: false
+                            }
+                        };
+                    },
+                    cache: true
+                },
+                minimumInputLength: 1
+            });
+        }
+
         function initializeAssistantSelects() {
             $('.assistant-select').each(function() {
                 const $select = $(this);
 
-                if (!$select.hasClass('select2-hidden-accessible')) {
-                    $select.select2({
-                        theme: 'bootstrap',
-                        width: '100%',
-                        dropdownParent: $('#modalProgramacion'),
-                        placeholder: 'Buscar ayudante disponible...',
-                        allowClear: true,
-                        ajax: {
-                            url: '{{ route('admin.scheduling.search-available-assistants') }}',
-                            type: 'GET',
-                            dataType: 'json',
-                            delay: 300,
-                            data: function(params) {
-                                const data = {
-                                    search: params.term,
-                                    date: $('input[name="start_date"]').val() ||
-                                        '{{ now()->format('Y-m-d') }}',
-                                    exclude_employees: getCurrentEmployeeIds(),
-                                    _token: '{{ csrf_token() }}'
-                                };
-
-                                console.log('Enviando datos a servidor:', data); // DEBUG
-                                return data;
-                            },
-                            processResults: function(data) {
-                                console.log('Respuesta del servidor:', data); // DEBUG
-                                return {
-                                    results: data.results || [],
-                                    pagination: data.pagination || {
-                                        more: false
-                                    }
-                                };
-                            },
-                            cache: true
-                        },
-                        minimumInputLength: 1
-                    });
+                // Destruir Select2 si ya está inicializado
+                if ($select.hasClass('select2-hidden-accessible')) {
+                    $select.select2('destroy');
                 }
+
+                // Limpiar opciones existentes
+                $select.empty();
+
+                $select.select2({
+                    theme: 'bootstrap',
+                    width: '100%',
+                    dropdownParent: $('#modalProgramacion'),
+                    placeholder: 'Buscar ayudante disponible...',
+                    allowClear: true,
+                    ajax: {
+                        url: '{{ route('admin.scheduling.search-available-assistants') }}',
+                        type: 'GET',
+                        dataType: 'json',
+                        delay: 300,
+                        data: function(params) {
+                            const data = {
+                                search: params.term,
+                                date: $('input[name="start_date"]').val() ||
+                                    '{{ now()->format('Y-m-d') }}',
+                                exclude_employees: getCurrentEmployeeIds(),
+                                _token: '{{ csrf_token() }}'
+                            };
+                            return data;
+                        },
+                        processResults: function(data) {
+                            return {
+                                results: data.results || [],
+                                pagination: data.pagination || {
+                                    more: false
+                                }
+                            };
+                        },
+                        cache: true
+                    },
+                    minimumInputLength: 1
+                });
             });
         }
 
@@ -439,7 +528,6 @@
 
             if (errors.length > 0) {
                 html += '<ul class="mb-0 mt-2">';
-                // Mostrar solo errores únicos
                 const uniqueErrors = [...new Set(errors)];
                 uniqueErrors.forEach(error => html += `<li>${error}</li>`);
                 html += '</ul>';
@@ -447,7 +535,6 @@
 
             if (suggestions.length > 0) {
                 html += '<div class="mt-2"><strong><i class="fas fa-lightbulb"></i> Sugerencias:</strong><ul>';
-                // Mostrar solo sugerencias únicas
                 const uniqueSuggestions = [...new Set(suggestions)];
                 uniqueSuggestions.forEach(suggestion => html += `<li>${suggestion}</li>`);
                 html += '</ul></div>';
@@ -475,8 +562,8 @@
             Swal.fire('Error', message, 'error');
         }
 
-        // Inicializar
         disableSubmitButton();
+
     });
 </script>
 
@@ -503,7 +590,6 @@
         background-color: #f8f9fa;
     }
 
-    /* Opciones más limpias */
     .select2-container--bootstrap .select2-results__option {
         padding: 10px 12px;
         border-bottom: 1px solid #f8f9fa;
@@ -511,13 +597,11 @@
         font-size: 14px;
     }
 
-    /* Hover suave */
     .select2-container--bootstrap .select2-results__option--highlighted {
         background-color: #007bff !important;
         color: white !important;
     }
 
-    /* Icono simple */
     .select2-container--bootstrap .select2-results__option:before {
         content: "•";
         margin-right: 8px;
@@ -525,7 +609,6 @@
         font-weight: bold;
     }
 
-    /* Badge simple para disponibles */
     .employee-badge {
         background: #e9ecef;
         color: #495057;
@@ -535,7 +618,6 @@
         margin-left: auto;
     }
 
-    /* Remove button simple */
     .select2-container--bootstrap .select2-selection__choice__remove {
         color: white;
         margin-right: 4px;
