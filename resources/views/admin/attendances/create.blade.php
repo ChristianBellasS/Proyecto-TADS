@@ -1,10 +1,29 @@
 {!! Form::open(['route' => 'admin.attendances.store', 'id' => 'attendanceForm']) !!}
+
+@if(isset($lastAttendance) && $lastAttendance)
+<div class="alert alert-info mb-4">
+    <h6 class="alert-heading"><i class="fas fa-history me-2"></i>Último registro encontrado</h6>
+    <div class="row mt-2">
+        <div class="col-md-6">
+            <strong>Tipo:</strong> 
+            <span class="badge {{ $lastAttendance->type === 'ENTRADA' ? 'bg-success' : 'bg-info' }}">
+                {{ $lastAttendance->type === 'ENTRADA' ? 'Entrada' : 'Salida' }}
+            </span>
+        </div>
+        <div class="col-md-6">
+            <strong>Hora:</strong> {{ $lastAttendance->attendance_date->format('H:i') }}
+        </div>
+    </div>
+</div>
+@endif
+
 @include('admin.attendances.templates.form')
+
 <div class="form-group text-right mt-4">
     <button type="button" class="btn btn-secondary mr-2" data-dismiss="modal">
         <i class="fas fa-times"></i> Cancelar
     </button>
-    <button type="submit" class="btn btn-success">
+    <button type="submit" class="btn btn-success" id="submitButton">
         <i class="fas fa-save"></i> Guardar Asistencia
     </button>
 </div>
@@ -16,15 +35,9 @@
         overflow-y: visible !important;
         padding: 1.5rem !important;
     }
-
-    .attendance-form {
-        min-height: auto;
-    }
-
     .is-invalid {
         border-color: #dc3545 !important;
     }
-
     .invalid-feedback {
         display: block;
         width: 100%;
@@ -46,9 +59,8 @@
         });
 
         function initializeForm() {
-            // Establecer fecha actual por defecto - CORREGIDO
+            // Establecer fecha actual por defecto
             const today = new Date();
-            // Ajustar al huso horario local
             const localDate = new Date(today.getTime() - (today.getTimezoneOffset() * 60000));
             const todayFormatted = localDate.toISOString().split('T')[0];
 
@@ -56,7 +68,7 @@
                 $('input[name="attendance_date"]').val(todayFormatted);
             }
 
-            // Establecer hora actual por defecto - CORREGIDO
+            // Establecer hora actual por defecto
             if (!$('input[name="attendance_time"]').val()) {
                 const now = new Date();
                 const hours = String(now.getHours()).padStart(2, '0');
@@ -79,9 +91,7 @@
             const selectedDate = new Date(input.val());
             const today = new Date();
 
-            // CORREGIDO: Comparar solo las partes de fecha (sin hora) en hora local
-            const selectedLocal = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate
-                .getDate());
+            const selectedLocal = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
             const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
             if (selectedLocal > todayLocal) {
@@ -97,9 +107,7 @@
             const selectedDate = new Date($('input[name="attendance_date"]').val());
             const today = new Date();
 
-            // CORREGIDO: Comparar solo las partes de fecha (sin hora) en hora local
-            const selectedLocal = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate
-                .getDate());
+            const selectedLocal = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
             const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
             // Solo validar hora si la fecha seleccionada es hoy
@@ -134,13 +142,18 @@
         }
 
         function submitForm() {
-            // Validaciones previas al envío
             if (!validateForm()) {
                 return;
             }
 
             var form = $('#attendanceForm');
             var formData = new FormData(form[0]);
+            
+            console.log('📤 Datos del formulario:');
+            for (var pair of formData.entries()) {
+                console.log(pair[0] + ': ' + pair[1]);
+            }
+
             var submitBtn = form.find('button[type="submit"]');
             var originalText = submitBtn.html();
 
@@ -156,7 +169,9 @@
                 processData: false,
                 contentType: false,
                 success: function(response) {
+                    console.log('✅ Respuesta del servidor:', response);
                     $('#modal').modal('hide');
+                    
                     Swal.fire({
                         title: "¡Éxito!",
                         text: response.message || "Asistencia registrada correctamente",
@@ -164,27 +179,17 @@
                         timer: 2000,
                         showConfirmButton: false
                     }).then(() => {
-                        // Refrescar la tabla principal
-                        if (typeof refreshTable === 'function') {
-                            refreshTable();
-                        } else if (window.refreshTable) {
-                            window.refreshTable();
-                        } else {
-                            // Recargar la página como fallback
-                            location.reload();
-                        }
+                        refreshAttendanceTable();
                     });
                 },
                 error: function(response) {
+                    console.error('❌ Error en la respuesta:', response);
                     var error = response.responseJSON;
                     var errorMessage = 'Error al guardar la asistencia';
 
                     if (error && error.errors) {
-                        // Mostrar todos los errores de validación
                         var errors = Object.values(error.errors).join('<br>');
                         errorMessage = errors;
-
-                        // Mostrar errores en los campos específicos
                         showValidationErrors(error.errors);
                     } else if (error && error.message) {
                         errorMessage = error.message;
@@ -201,6 +206,35 @@
                     submitBtn.prop('disabled', false).html(originalText);
                 }
             });
+        }
+
+        function refreshAttendanceTable() {
+            console.log('Refrescando tabla de asistencias...');
+            
+            // Método 1: Si existe la función global refreshTable
+            if (typeof refreshTable === 'function') {
+                refreshTable();
+                console.log('Tabla refrescada usando refreshTable()');
+                return;
+            }
+            
+            // Método 2: Si existe window.refreshTable
+            if (typeof window.refreshTable === 'function') {
+                window.refreshTable();
+                console.log('Tabla refrescada usando window.refreshTable()');
+                return;
+            }
+            
+            // Método 3: Si existe la DataTable directamente
+            if ($.fn.DataTable.isDataTable('#table')) {
+                $('#table').DataTable().ajax.reload(null, false);
+                console.log('Tabla refrescada usando DataTable().ajax.reload()');
+                return;
+            }
+            
+            // Método 4: Último recurso - recargar página
+            console.log('No se encontró método de refresco, recargando página...');
+            location.reload();
         }
 
         function validateForm() {
@@ -242,13 +276,6 @@
             const type = $('select[name="type"]').val();
             if (!type) {
                 showFieldWarning($('select[name="type"]'), 'El tipo es requerido');
-                isValid = false;
-            }
-
-            // Validar período
-            const period = $('select[name="period"]').val();
-            if (!period) {
-                showFieldWarning($('select[name="period"]'), 'El período es requerido');
                 isValid = false;
             }
 
@@ -294,9 +321,6 @@
             if (errors.type) {
                 showFieldWarning($('select[name="type"]'), errors.type[0]);
             }
-            if (errors.period) {
-                showFieldWarning($('select[name="period"]'), errors.period[0]);
-            }
             if (errors.status) {
                 showFieldWarning($('select[name="status"]'), errors.status[0]);
             }
@@ -321,12 +345,6 @@
         });
 
         $('select[name="type"]').on('change', function() {
-            if ($(this).val()) {
-                hideFieldWarning($(this));
-            }
-        });
-
-        $('select[name="period"]').on('change', function() {
             if ($(this).val()) {
                 hideFieldWarning($(this));
             }

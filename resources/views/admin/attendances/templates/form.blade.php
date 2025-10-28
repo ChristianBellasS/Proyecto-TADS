@@ -9,6 +9,8 @@
                         {{ $attendance->employee->name }} {{ $attendance->employee->last_name }} -
                         {{ $attendance->employee->dni }}
                     </option>
+                @elseif(isset($employeeId))
+                    <option value="{{ $employeeId }}" selected></option>
                 @endif
             </select>
             <small class="form-text text-muted">Busque por nombre, apellido o DNI del empleado</small>
@@ -36,6 +38,15 @@
                     <span id="info_phone">-</span>
                 </div>
             </div>
+
+            <!-- Información de asistencia del día -->
+            <div id="attendance_info" class="mt-3 p-2 border rounded" style="display: none;">
+                <h6 class="mb-2"><i class="fas fa-history"></i> Registros del día:</h6>
+                <div id="today_records"></div>
+                <div id="suggestion_info" class="mt-2 p-2 rounded" style="display: none;">
+                    <small><i class="fas fa-info-circle"></i> <span id="suggestion_text"></span></small>
+                </div>
+            </div>
         </div>
 
         <div class="row">
@@ -44,11 +55,14 @@
                     {!! Form::label('attendance_date', 'Fecha *') !!}
                     {!! Form::date(
                         'attendance_date',
-                        isset($attendance) ? $attendance->formatted_date ?? $attendance->attendance_date->format('Y-m-d') : null,
+                        isset($attendance)
+                            ? $attendance->formatted_date ?? $attendance->attendance_date->format('Y-m-d')
+                            : $attendanceDate ?? now()->format('Y-m-d'),
                         [
                             'class' => 'form-control',
                             'required',
                             'max' => \Carbon\Carbon::now()->format('Y-m-d'),
+                            'id' => 'attendance_date_input',
                         ],
                     ) !!}
                     <small class="form-text text-muted">Seleccione la fecha de asistencia</small>
@@ -59,10 +73,13 @@
                     {!! Form::label('attendance_time', 'Hora *') !!}
                     {!! Form::time(
                         'attendance_time',
-                        isset($attendance) ? $attendance->formatted_time ?? $attendance->attendance_date->format('H:i') : null,
+                        isset($attendance)
+                            ? $attendance->formatted_time ?? $attendance->attendance_date->format('H:i')
+                            : now()->format('H:i'),
                         [
                             'class' => 'form-control',
                             'required',
+                            'id' => 'attendance_time_input',
                         ],
                     ) !!}
                     <small class="form-text text-muted">Seleccione la hora de registro</small>
@@ -71,7 +88,7 @@
         </div>
 
         <div class="row">
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <div class="form-group">
                     {!! Form::label('type', 'Tipo *') !!}
                     {!! Form::select(
@@ -80,53 +97,33 @@
                             'ENTRADA' => 'Entrada',
                             'SALIDA' => 'Salida',
                         ],
-                        isset($attendance) ? $attendance->type : null,
+                        isset($attendance) ? $attendance->type : $suggestedType ?? 'ENTRADA',
                         [
                             'class' => 'form-control',
                             'required',
-                            'placeholder' => 'Seleccione el tipo',
+                            'id' => 'type_select',
                         ],
                     ) !!}
-                    <small class="form-text text-muted">Tipo de registro</small>
+                    <small class="form-text text-muted" id="type_help">
+                        Tipo de registro
+                    </small>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="form-group">
-                    {!! Form::label('period', 'Período *') !!}
-                    {!! Form::select(
-                        'period',
-                        [
-                            1 => 'Mañana',
-                            2 => 'Tarde',
-                            3 => 'Noche',
-                            4 => 'Día completo',
-                        ],
-                        isset($attendance) ? $attendance->period : null,
-                        [
-                            'class' => 'form-control',
-                            'required',
-                            'placeholder' => 'Seleccione el período',
-                        ],
-                    ) !!}
-                    <small class="form-text text-muted">Seleccione el turno o período</small>
-                </div>
-            </div>
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <div class="form-group">
                     {!! Form::label('status', 'Estado *') !!}
                     {!! Form::select(
                         'status',
                         [
                             1 => 'Presente',
-                            2 => 'Ausente',
-                            3 => 'Tarde',
-                            4 => 'Permiso',
+                            2 => 'Tarde',
                         ],
                         isset($attendance) ? $attendance->status : null,
                         [
                             'class' => 'form-control',
                             'required',
                             'placeholder' => 'Seleccione el estado',
+                            'id' => 'status_select',
                         ],
                     ) !!}
                     <small class="form-text text-muted">Estado de la asistencia</small>
@@ -140,233 +137,17 @@
                 'class' => 'form-control',
                 'placeholder' => 'Agregue notas adicionales sobre la asistencia...',
                 'rows' => 2,
+                'id' => 'notes_input',
             ]) !!}
             <small class="form-text text-muted">Observaciones o comentarios sobre el registro</small>
         </div>
+
+        <!-- Mensaje de bloqueo completo -->
+        <div id="complete_block_message" class="alert alert-warning d-none">
+            <i class="fas fa-ban"></i>
+            <strong>Asistencia completa:</strong>
+            Este empleado ya tiene registrada tanto la entrada como la salida para este día.
+            No se pueden agregar más registros.
+        </div>
     </div>
 </div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        $('#employee_select').select2({
-            language: "es",
-            placeholder: "Buscar por nombre, apellido o DNI...",
-            allowClear: true,
-            dropdownParent: $('#modal'),
-            width: '100%',
-            ajax: {
-                url: "{{ route('admin.employees.search') }}",
-                type: "GET",
-                dataType: 'json',
-                delay: 300,
-                data: function(params) {
-                    return {
-                        search: params.term,
-                        page: params.page || 1
-                    };
-                },
-                processResults: function(response) {
-                    return {
-                        results: response.data.map(function(employee) {
-                            return {
-                                id: employee.id,
-                                text: employee.name + ' ' + employee.last_name +
-                                    ' - DNI: ' + employee.dni,
-                                full_name: employee.name + ' ' + employee.last_name,
-                                dni: employee.dni,
-                                email: employee.email,
-                                phone: employee.telefono || 'No registrado'
-                            };
-                        })
-                    };
-                },
-
-                cache: true
-            },
-            minimumInputLength: 2,
-            templateResult: formatEmployee,
-            templateSelection: formatEmployeeSelection
-        });
-
-        $('#employee_select').on('select2:select', function(e) {
-            var data = e.params.data;
-            showEmployeeInfo(data);
-        });
-
-        // Cuando se limpia la selección, ocultar información
-        $('#employee_select').on('select2:clear', function(e) {
-            hideEmployeeInfo();
-        });
-
-        // Formatear cómo se muestran los resultados en el dropdown
-        function formatEmployee(employee) {
-            if (!employee.id) {
-                return employee.text;
-            }
-
-            var $container = $(
-                '<div class="employee-option">' +
-                '<div class="employee-name">' +
-                employee.full_name +
-                '<span class="badge badge-primary employee-badge">DNI: ' + employee.dni + '</span>' +
-                '</div>' +
-                '<div class="employee-details">' +
-                '<span class="employee-detail-item"><i class="fas fa-envelope"></i>' + (employee.email ||
-                    'Sin email') + '</span>' +
-                '<span class="employee-detail-item"><i class="fas fa-phone"></i>' + employee.phone +
-                '</span>' +
-                '</div>' +
-                '</div>'
-            );
-
-            return $container;
-        }
-
-        // Formatear cómo se muestra la selección en el input
-        function formatEmployeeSelection(employee) {
-            if (!employee.id) {
-                return employee.text;
-            }
-            return employee.full_name + ' - DNI: ' + employee.dni;
-        }
-
-        // Mostrar información detallada del empleado
-        function showEmployeeInfo(employeeData) {
-            $('#info_fullname').text(employeeData.full_name);
-            $('#info_dni').text(employeeData.dni);
-            $('#info_email').text(employeeData.email || 'No registrado');
-            $('#info_phone').text(employeeData.phone || 'No registrado');
-            $('#employee_info').removeClass('d-none').addClass('fade-in');
-        }
-
-        // Ocultar información del empleado
-        function hideEmployeeInfo() {
-            $('#employee_info').addClass('d-none');
-            $('#info_fullname').text('-');
-            $('#info_dni').text('-');
-            $('#info_email').text('-');
-            $('#info_phone').text('-');
-        }
-
-        // Si estamos editando, cargar información del empleado
-        @if (isset($attendance) && $attendance->employee_id)
-            // Simular datos del empleado para mostrar en la info
-            var employeeData = {
-                full_name: '{{ $attendance->employee->name }} {{ $attendance->employee->last_name }}',
-                dni: '{{ $attendance->employee->dni }}',
-                email: '{{ $attendance->employee->email }}',
-                phone: '{{ $attendance->employee->phone ?? 'No registrado' }}'
-            };
-            showEmployeeInfo(employeeData);
-        @endif
-
-        // Configurar fecha por defecto a hoy si es nuevo registro
-        const attendanceDateInput = document.querySelector('input[name="attendance_date"]');
-        if (attendanceDateInput && !attendanceDateInput.value) {
-            const today = new Date().toISOString().split('T')[0];
-            attendanceDateInput.value = today;
-        }
-
-        // Configurar hora por defecto a la hora actual si es nuevo registro
-        const attendanceTimeInput = document.querySelector('input[name="attendance_time"]');
-        if (attendanceTimeInput && !attendanceTimeInput.value) {
-            const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            attendanceTimeInput.value = `${hours}:${minutes}`;
-        }
-
-        // Validar que la fecha no sea futura
-        attendanceDateInput.addEventListener('change', function() {
-            const selectedDate = new Date(this.value);
-            const today = new Date();
-
-            if (selectedDate > today) {
-                alert('No se puede registrar asistencia con fecha futura');
-                this.value = today.toISOString().split('T')[0];
-            }
-        });
-
-        // Validar que la hora no sea futura si la fecha es hoy
-        attendanceTimeInput.addEventListener('change', function() {
-            const selectedDate = new Date(attendanceDateInput.value);
-            const today = new Date();
-            const currentDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-            // Solo validar hora si la fecha seleccionada es hoy
-            if (selectedDate.getTime() === currentDate.getTime()) {
-                const [hours, minutes] = this.value.split(':');
-                const selectedTime = new Date();
-                selectedTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-
-                if (selectedTime > today) {
-                    alert('No se puede registrar asistencia con hora futura');
-                    const currentHours = String(today.getHours()).padStart(2, '0');
-                    const currentMinutes = String(today.getMinutes()).padStart(2, '0');
-                    this.value = `${currentHours}:${currentMinutes}`;
-                }
-            }
-        });
-
-        // Agregar animación CSS
-        const style = document.createElement('style');
-        style.textContent = `
-            .fade-in {
-                animation: fadeIn 0.5s ease-in;
-            }
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(-10px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
-            .select2-container--default .select2-results > .select2-results__options {
-                max-height: 300px;
-            }
-            
-            .employee-option {
-                padding: 8px 12px;
-                border-bottom: 1px solid #f0f0f0;
-            }
-            
-            .employee-option:last-child {
-                border-bottom: none;
-            }
-            
-            .employee-option:hover {
-                background-color: #f8f9fa;
-            }
-            
-            .employee-name {
-                font-size: 14px;
-                font-weight: 600;
-                color: #2c3e50;
-                margin-bottom: 2px;
-            }
-            
-            .employee-details {
-                font-size: 12px;
-                color: #6c757d;
-            }
-            
-            .employee-detail-item {
-                display: inline-block;
-                margin-right: 15px;
-            }
-            
-            .employee-detail-item i {
-                width: 14px;
-                margin-right: 4px;
-                color: #7f8c8d;
-            }
-            
-            .employee-badge {
-                font-size: 11px;
-                padding: 2px 6px;
-                border-radius: 10px;
-                margin-left: 8px;
-                background: #007bff;
-                color: white;
-            }
-        `;
-        document.head.appendChild(style);
-    });
-</script>
