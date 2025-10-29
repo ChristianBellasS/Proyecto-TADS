@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('name', 100);
             $table->text('description')->nullable();
             $table->foreignId('district_id')->constrained();
+            $table->decimal('average_waste', 10, 2)->nullable()->default(null);
             $table->boolean('status')->default(true);
             $table->timestamps();
         });

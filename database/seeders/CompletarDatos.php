@@ -471,7 +471,7 @@ class CompletarDatos extends Seeder
 
             $groupData = [
                 'name' => "Grupo Recolector " . ($i + 1),
-                'days' => 'Lunes,Martes,Miércoles,Jueves,Viernes,Sábado',
+                'days' => 'Lunes,Martes,Miércoles,Jueves,Viernes,Sábado,Domingo',
                 'status' => 'active',
                 'zone_id' => $zoneId,
                 'shift_id' => $shiftId,

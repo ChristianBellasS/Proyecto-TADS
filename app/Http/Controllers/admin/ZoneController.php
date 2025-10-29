@@ -43,6 +43,7 @@ class ZoneController extends Controller
             'name' => 'required|string|max:100',
             'description' => 'nullable|string',
             'district_id' => 'required|exists:districts,id',
+            'average_waste' => 'nullable|numeric|min:0',
             'status' => 'required|in:0,1',
             'coordinates' => 'required|array|min:3',
             'coordinates.*.latitude' => 'required|numeric',
@@ -53,6 +54,7 @@ class ZoneController extends Controller
             'name' => $request->name,
             'description' => $request->description,
             'district_id' => $request->district_id,
+            'average_waste' => $request->average_waste,
             'status' => $request->status
         ]);
 
@@ -74,7 +76,7 @@ class ZoneController extends Controller
 
     public function show(Zone $zone)
     {
-        return response()->json($zone->load(['coordinates', 'district', 'district.province']));
+        return response()->json($zone->load(['coordinates', 'district', 'district.province', 'district.province.department']));
     }
 
     public function edit(Zone $zone)
@@ -109,6 +111,7 @@ class ZoneController extends Controller
             'name' => 'required|string|max:100',
             'description' => 'nullable|string',
             'district_id' => 'required|exists:districts,id',
+            'average_waste' => 'nullable|numeric|min:0',
             'status' => 'required|in:0,1',
             'coordinates' => 'required|array|min:3',
             'coordinates.*.latitude' => 'required|numeric',
@@ -119,6 +122,7 @@ class ZoneController extends Controller
             'name' => $request->name,
             'description' => $request->description,
             'district_id' => $request->district_id,
+            'average_waste' => $request->average_waste,
             'status' => $request->status
         ]);
 

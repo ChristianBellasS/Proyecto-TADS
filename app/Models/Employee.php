@@ -318,13 +318,13 @@ class Employee extends Authenticatable
             */
             // Nuevo código para permitir programación sin contrato activo
             return $this->contracts()
-            ->where('is_active', true)
-            ->where('start_date', '<=', $date)
-            ->where(function($query) use ($date) {
-                $query->whereNull('end_date')
-                      ->orWhere('end_date', '>=', $date);
-            })
-            ->exists();
+                ->where('is_active', true)
+                ->where('start_date', '<=', $date)
+                ->where(function ($query) use ($date) {
+                    $query->whereNull('end_date')
+                        ->orWhere('end_date', '>=', $date);
+                })
+                ->exists();
         }
 
         // 2. Validar vacaciones
@@ -404,18 +404,38 @@ class Employee extends Authenticatable
         */
         // Nuevo código para considerar estado activo        
         return $query->where('estado', 'activo')
-            ->whereHas('contracts', function($q) use ($date) {
+            ->whereHas('contracts', function ($q) use ($date) {
                 $q->where('is_active', true)
-                  ->where('start_date', '<=', $date)
-                  ->where(function($query) use ($date) {
-                      $query->whereNull('end_date')
+                    ->where('start_date', '<=', $date)
+                    ->where(function ($query) use ($date) {
+                        $query->whereNull('end_date')
                             ->orWhere('end_date', '>=', $date);
-                  });
+                    });
             })
-            ->whereDoesntHave('vacations', function($q) use ($date) {
+            ->whereDoesntHave('vacations', function ($q) use ($date) {
                 $q->where('status', 'Approved')
-                  ->where('start_date', '<=', $date)
-                  ->where('end_date', '>=', $date);
+                    ->where('start_date', '<=', $date)
+                    ->where('end_date', '>=', $date);
             });
+    }
+
+    /**
+     * Scope para filtrar solo ayudantes
+     */
+    public function scopeAssistants($query)
+    {
+        return $query->whereHas('employeeType', function ($q) {
+            $q->where('name', 'Ayudante');
+        });
+    }
+
+    /**
+     * Scope para filtrar solo conductores
+     */
+    public function scopeDrivers($query)
+    {
+        return $query->whereHas('employeeType', function ($q) {
+            $q->where('name', 'Conductor');
+        });
     }
 }

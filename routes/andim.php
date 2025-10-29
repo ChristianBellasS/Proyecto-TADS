@@ -163,8 +163,15 @@
     Route::get('/scheduling/daily-data', [SchedulingController::class, 'dailyData'])
         ->name('admin.scheduling.daily-data');
 
-    Route::get('/scheduling/{id}/edit', [SchedulingController::class, 'edit'])
+    // Mostrar el formulario de edición (AJAX)
+    Route::get('/admin/scheduling/{id}/edit', [SchedulingController::class, 'edit'])
         ->name('admin.scheduling.edit');
+
+    // Guardar los cambios (PUT)
+    Route::put('/admin/scheduling/{id}', [SchedulingController::class, 'update'])
+        ->name('admin.scheduling.update');
+    
+
 
     // Rutas para búsqueda de grupos de personal
     Route::get('/scheduling/search-employee-groups', [SchedulingController::class, 'searchEmployeeGroups'])
@@ -184,7 +191,31 @@
     // Route::post('/scheduling/check-availability', [SchedulingController::class, 'checkAvailability'])->name('admin.scheduling.check-availability');
     Route::post('/scheduling/bulk-update', [SchedulingController::class, 'bulkUpdate'])->name('admin.scheduling.bulk-update');
     Route::post('/scheduling/check-availability', [SchedulingController::class, 'checkAvailability'])->name('admin.scheduling.check-availability');
-    Route::post('/scheduling/bulk-update', [SchedulingController::class, 'bulkUpdate'])->name('admin.scheduling.bulk-update');
+    // Route::post('/scheduling/bulk-update', [SchedulingController::class, 'bulkUpdate'])->name('admin.scheduling.bulk-update');
 
     //TURNOS
     Route::resource('shifts', ShiftController::class)->names('admin.shifts');
+    
+    // Route::post('scheduling/check-availability', [SchedulingController::class, 'checkAvailability'])->name('admin.scheduling.check-availability');
+    // Comente esta ruta duplicada
+    // Route::get('/admin/scheduling/group-data/{groupId}', [SchedulingController::class, 'getGroupData']);
+    // Route::get('scheduling/group-data/{groupId}', [SchedulingController::class, 'getGroupData'])->name('admin.scheduling.group-data');
+    // Otras rutas de scheduling
+    // Route::get('/scheduling/zone-data/{zone}', [SchedulingController::class, 'getZoneData'])->name('admin.scheduling.zone-data');
+    // Route::post('/scheduling/check-availability', [SchedulingController::class, 'checkAvailability'])->name('admin.scheduling.check-availability');
+    // Route::post('/scheduling/bulk-update', [SchedulingController::class, 'bulkUpdate'])->name('admin.scheduling.bulk-update');
+    // Route::post('/scheduling/check-availability', [SchedulingController::class, 'checkAvailability'])->name('admin.scheduling.check-availability');
+    // Route::post('/scheduling/bulk-update', [SchedulingController::class, 'bulkUpdate'])->name('admin.scheduling.bulk-update');
+
+    //
+    Route::get('/scheduling/search-available-assistants', [SchedulingController::class, 'searchAvailableAssistants'])
+        ->name('admin.scheduling.search-available-assistants');
+
+    Route::get('/scheduling/search-available-drivers', [SchedulingController::class, 'searchAvailableDrivers'])
+        ->name('admin.scheduling.search-available-drivers');
+
+    Route::get('/scheduling/group-details/{groupId}', [SchedulingController::class, 'getGroupDetails'])
+        ->name('admin.scheduling.group-details');
+
+    //TURNOS
+    // Route::resource('shifts', ShiftController::class)->names('admin.shifts');
