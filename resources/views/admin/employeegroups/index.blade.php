@@ -606,13 +606,6 @@
             font-size: 0.8rem;
         }
 
-        /* Scroll suave */
-        .table-responsive {
-            border: 1px solid #dee2e6;
-            border-radius: 0.5rem;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-        }
-
         /* Mejorar la legibilidad en pantallas pequeñas */
         @media (max-width: 768px) {
             .table-responsive {
