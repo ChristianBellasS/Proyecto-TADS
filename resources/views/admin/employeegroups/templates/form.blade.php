@@ -119,7 +119,132 @@
     <!-- Los campos de ayudantes se generarán dinámicamente aquí -->
 </div>
 
+<!-- Mensaje general de error -->
+<div id="form_errors" class="alert alert-danger d-none mt-3">
+    <i class="fas fa-exclamation-triangle"></i>
+    <strong>No se puede guardar el grupo:</strong>
+    <ul id="error_list" class="mb-0 mt-2"></ul>
+</div>
+
 <script>
+// Variable global para controlar empleados con conflictos
+let conflictedEmployees = new Set();
+
+// Función para verificar disponibilidad del empleado
+function checkEmployeeAvailability(employeeId, fieldName, currentGroupId = null) {
+    if (!employeeId) {
+        hideEmployeeWarning(fieldName);
+        conflictedEmployees.delete(fieldName);
+        updateSubmitButton();
+        return;
+    }
+
+    $.ajax({
+        url: '{{ route("admin.employeegroups.check-employee") }}',
+        type: 'GET',
+        data: {
+            employee_id: employeeId,
+            current_group_id: currentGroupId
+        },
+        success: function(response) {
+            if (!response.available) {
+                // Mostrar advertencia y agregar a conflictos
+                showEmployeeWarning(fieldName, response.message);
+                conflictedEmployees.add(fieldName);
+            } else {
+                // Ocultar advertencia y quitar de conflictos
+                hideEmployeeWarning(fieldName);
+                conflictedEmployees.delete(fieldName);
+            }
+            updateSubmitButton();
+        },
+        error: function() {
+            // En caso de error, ocultar advertencia
+            hideEmployeeWarning(fieldName);
+            conflictedEmployees.delete(fieldName);
+            updateSubmitButton();
+        }
+    });
+}
+
+// Función para mostrar advertencia
+function showEmployeeWarning(fieldName, message) {
+    // Remover advertencia anterior si existe
+    $(`#${fieldName}-warning`).remove();
+    
+    // Crear elemento de advertencia
+    const warningDiv = $(`
+        <div id="${fieldName}-warning" class="alert alert-warning alert-dismissible fade show mt-2">
+            <i class="fas fa-exclamation-triangle"></i> ${message}
+            <button type="button" class="close" data-dismiss="alert">
+                <span>&times;</span>
+            </button>
+        </div>
+    `);
+    
+    // Insertar después del campo correspondiente
+    $(`#${fieldName}`).closest('.form-group').append(warningDiv);
+}
+
+// Función para ocultar advertencia
+function hideEmployeeWarning(fieldName) {
+    $(`#${fieldName}-warning`).remove();
+}
+
+// Función para actualizar el estado del botón de envío
+function updateSubmitButton() {
+    const submitButton = $('button[type="submit"]');
+    const formErrors = $('#form_errors');
+    const errorList = $('#error_list');
+    
+    if (conflictedEmployees.size > 0) {
+        // Deshabilitar botón y mostrar errores
+        submitButton.prop('disabled', true).addClass('btn-secondary').removeClass('btn-success');
+        formErrors.removeClass('d-none');
+        
+        // Limpiar y actualizar lista de errores
+        errorList.empty();
+        conflictedEmployees.forEach(fieldName => {
+            const fieldLabel = getFieldLabel(fieldName);
+            errorList.append(`<li>${fieldLabel} ya está asignado a otro grupo</li>`);
+        });
+    } else {
+        // Habilitar botón y ocultar errores
+        submitButton.prop('disabled', false).removeClass('btn-secondary').addClass('btn-success');
+        formErrors.addClass('d-none');
+    }
+}
+
+// Función para obtener etiqueta del campo
+function getFieldLabel(fieldName) {
+    const labels = {
+        'driver_id': 'Conductor',
+        'assistant1_id': 'Ayudante 1',
+        'assistant2_id': 'Ayudante 2', 
+        'assistant3_id': 'Ayudante 3',
+        'assistant4_id': 'Ayudante 4',
+        'assistant5_id': 'Ayudante 5'
+    };
+    return labels[fieldName] || fieldName;
+}
+
+// Función para validar el formulario antes de enviar
+function validateFormBeforeSubmit() {
+    if (conflictedEmployees.size > 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error de validación',
+            html: `No se puede guardar el grupo porque los siguientes empleados ya están asignados a otros grupos:<br><br>
+                  <strong>${Array.from(conflictedEmployees).map(field => getFieldLabel(field)).join('<br>')}</strong><br><br>
+                  Por favor, asigne empleados libres o quite las asignaciones conflictivas.`,
+            confirmButtonText: 'Entendido'
+        });
+        return false;
+    }
+    return true;
+}
+
+// Función para actualizar campos de ayudantes
 // Función para actualizar campos de ayudantes
 function updateAssistantsFields() {
     const vehicleSelect = document.getElementById('vehicle_id');
@@ -155,18 +280,11 @@ function updateAssistantsFields() {
         fieldDiv.innerHTML = `
             <div class="form-group">
                 <label for="assistant${i}_search">Ayudante ${i}</label>
-                <div class="input-group">
-                    <input type="text" class="form-control" 
-                           id="assistant${i}_search" 
-                           placeholder="Buscar ayudante..."
-                           oninput="searchEmployees(this, 2, 'assistant${i}_id', 'selected_assistant${i}', 'assistant${i}_results')">
-                    <input type="hidden" name="assistant${i}_id" id="assistant${i}_id" value="">
-                    <div class="input-group-append">
-                        <button type="button" class="btn btn-outline-danger" onclick="clearAssistantField(${i})">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
+                <input type="text" class="form-control" 
+                       id="assistant${i}_search" 
+                       placeholder="Buscar ayudante..."
+                       oninput="searchEmployees(this, 2, 'assistant${i}_id', 'selected_assistant${i}', 'assistant${i}_results')">
+                <input type="hidden" name="assistant${i}_id" id="assistant${i}_id" value="">
                 <div id="assistant${i}_results" class="search-results"></div>
                 <div id="selected_assistant${i}" class="selected-employee mt-2"></div>
             </div>
@@ -180,6 +298,17 @@ function updateAssistantsFields() {
         loadExistingAssistants();
     }, 100);
     @endif
+}
+
+// Función para limpiar campo de ayudante
+function clearAssistantField(number) {
+    document.getElementById(`assistant${number}_id`).value = '';
+    document.getElementById(`assistant${number}_search`).value = '';
+    document.getElementById(`selected_assistant${number}`).innerHTML = '';
+    document.getElementById(`assistant${number}_results`).innerHTML = '';
+    hideEmployeeWarning(`assistant${number}_id`);
+    conflictedEmployees.delete(`assistant${number}_id`);
+    updateSubmitButton();
 }
 
 // Función para buscar empleados
@@ -256,12 +385,19 @@ function selectEmployee(employee, targetId, containerId) {
             </button>
         </div>
     `;
+    
+    // Verificar disponibilidad del empleado seleccionado
+    const currentGroupId = @if(isset($group) && $isEdit) {{ $group->id }} @else null @endif;
+    checkEmployeeAvailability(employee.id, targetId, currentGroupId);
 }
 
 // Función para limpiar selección
 function clearEmployeeSelection(targetId, containerId) {
     document.getElementById(targetId).value = '';
     document.getElementById(containerId).innerHTML = '';
+    hideEmployeeWarning(targetId);
+    conflictedEmployees.delete(targetId);
+    updateSubmitButton();
 }
 
 // Función para limpiar campo de ayudante
@@ -270,6 +406,9 @@ function clearAssistantField(number) {
     document.getElementById(`assistant${number}_search`).value = '';
     document.getElementById(`selected_assistant${number}`).innerHTML = '';
     document.getElementById(`assistant${number}_results`).innerHTML = '';
+    hideEmployeeWarning(`assistant${number}_id`);
+    conflictedEmployees.delete(`assistant${number}_id`);
+    updateSubmitButton();
 }
 
 // Cargar ayudantes existentes en edición
@@ -301,6 +440,32 @@ function loadExistingAssistants() {
     @endif
 }
 
+// Inicializar eventos de validación
+function initializeValidationEvents() {
+    const currentGroupId = @if(isset($group) && $isEdit) {{ $group->id }} @else null @endif;
+    
+    // Evento para conductor
+    $('#driver_id').on('change', function() {
+        const employeeId = $(this).val();
+        checkEmployeeAvailability(employeeId, 'driver_id', currentGroupId);
+    });
+    
+    // Eventos para ayudantes (se agregan dinámicamente)
+    $(document).on('change', '[id^="assistant"][id$="_id"]', function() {
+        const employeeId = $(this).val();
+        const fieldName = $(this).attr('id');
+        checkEmployeeAvailability(employeeId, fieldName, currentGroupId);
+    });
+    
+    // Validar formulario antes de enviar
+    $('#employeeGroupForm').on('submit', function(e) {
+        if (!validateFormBeforeSubmit()) {
+            e.preventDefault();
+            return false;
+        }
+    });
+}
+
 // Inicializar al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Página cargada - inicializando campos de ayudantes');
@@ -308,8 +473,6 @@ document.addEventListener('DOMContentLoaded', function() {
     @if(isset($group) && $group->vehicle)
         // Si estamos editando, generar campos basados en el vehículo seleccionado
         console.log('Editando grupo, vehículo seleccionado:', '{{ $group->vehicle->plate }}');
-        
-        // EJECUCIÓN INMEDIATA
         updateAssistantsFields();
     @else
         // Si es nuevo, verificar si ya hay un vehículo seleccionado
@@ -319,6 +482,9 @@ document.addEventListener('DOMContentLoaded', function() {
             updateAssistantsFields();
         }
     @endif
+    
+    // Inicializar eventos de validación
+    initializeValidationEvents();
 });
 
 // Forzar carga después de un tiempo por si acaso
@@ -379,5 +545,11 @@ select:disabled {
     opacity: 1;
     color: #6c757d;
     cursor: not-allowed;
+}
+
+/* Estilo para botón deshabilitado */
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
 }
 </style>

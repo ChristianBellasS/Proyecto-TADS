@@ -77,7 +77,6 @@ class EmployeeGroupController extends Controller
             
             return view('admin.employeegroups.create', compact('zones', 'shifts', 'vehicles', 'employees'));
         } catch (\Exception $e) {
-            // \Log::error('Error en EmployeeGroupController@create: ' . $e->getMessage());
             abort(500, 'Error al cargar el formulario: ' . $e->getMessage());
         }
     }
@@ -103,11 +102,11 @@ class EmployeeGroupController extends Controller
             ]);
 
             // Verificar que el vehículo no esté ya asignado a otro grupo activo
-            $existingGroup = EmployeeGroup::where('vehicle_id', $request->vehicle_id)
+            $existingVehicle = EmployeeGroup::where('vehicle_id', $request->vehicle_id)
                 ->where('status', 'active')
                 ->first();
 
-            if ($existingGroup) {
+            if ($existingVehicle) {
                 return response()->json([
                     'message' => 'Error: El vehículo ya está asignado a otro grupo activo.',
                     'error' => 'Vehículo no disponible'
@@ -131,7 +130,6 @@ class EmployeeGroupController extends Controller
 
             return response()->json(['message' => 'Grupo de personal creado exitosamente.'], 200);
         } catch (\Throwable $th) {
-            // \Log::error('Error en EmployeeGroupController@store: ' . $th->getMessage());
             return response()->json(['message' => 'Error al crear el grupo.', 'error' => $th->getMessage()], 500);
         }
     }
@@ -160,7 +158,6 @@ class EmployeeGroupController extends Controller
             
             return view('admin.employeegroups.edit', compact('group', 'zones', 'shifts', 'vehicles', 'employees'));
         } catch (\Exception $e) {
-            // \Log::error('Error en EmployeeGroupController@edit: ' . $e->getMessage());
             abort(404, 'Grupo no encontrado');
         }
     }
@@ -201,7 +198,6 @@ class EmployeeGroupController extends Controller
 
             return response()->json(['message' => 'Grupo actualizado exitosamente.'], 200);
         } catch (\Throwable $th) {
-            // \Log::error('Error en EmployeeGroupController@update: ' . $th->getMessage());
             return response()->json(['message' => 'Error al actualizar el grupo.', 'error' => $th->getMessage()], 500);
         }
     }
@@ -217,7 +213,6 @@ class EmployeeGroupController extends Controller
 
             return response()->json(['message' => 'Grupo eliminado exitosamente.'], 200);
         } catch (\Throwable $th) {
-            // \Log::error('Error en EmployeeGroupController@destroy: ' . $th->getMessage());
             return response()->json(['message' => 'Error al eliminar el grupo.', 'error' => $th->getMessage()], 500);
         }
     }
@@ -263,8 +258,74 @@ class EmployeeGroupController extends Controller
 
             return response()->json($employees);
         } catch (\Exception $e) {
-            // \Log::error('Error en EmployeeGroupController@searchEmployees: ' . $e->getMessage());
             return response()->json([], 500);
         }
+    }
+
+    /**
+     * Verificar si un empleado está disponible (NUEVO MÉTODO)
+     */
+    public function checkEmployeeAvailability(Request $request)
+    {
+        try {
+            $employeeId = $request->get('employee_id');
+            $currentGroupId = $request->get('current_group_id'); // Para edición
+
+            if (!$employeeId) {
+                return response()->json(['available' => true]);
+            }
+
+            $employee = Employee::find($employeeId);
+            if (!$employee) {
+                return response()->json(['available' => true]);
+            }
+
+            // Buscar si el empleado está asignado a algún grupo activo
+            $existingAssignment = EmployeeGroup::where('status', 'active')
+                ->where(function($query) use ($employeeId) {
+                    $query->where('driver_id', $employeeId)
+                          ->orWhere('assistant1_id', $employeeId)
+                          ->orWhere('assistant2_id', $employeeId)
+                          ->orWhere('assistant3_id', $employeeId)
+                          ->orWhere('assistant4_id', $employeeId)
+                          ->orWhere('assistant5_id', $employeeId);
+                });
+
+            // Excluir el grupo actual si estamos editando
+            if ($currentGroupId) {
+                $existingAssignment->where('id', '!=', $currentGroupId);
+            }
+
+            $existingGroup = $existingAssignment->first();
+
+            if ($existingGroup) {
+                $role = $this->getEmployeeRole($employeeId, $existingGroup);
+                return response()->json([
+                    'available' => false,
+                    'message' => "¡ADVERTENCIA! {$employee->name} {$employee->last_name} ya está asignado como {$role} en el grupo '{$existingGroup->name}'. No lo llenes de chamba, asigna a otro conductor/ayudante libre.",
+                    'existing_group' => $existingGroup->name
+                ]);
+            }
+
+            return response()->json(['available' => true]);
+
+        } catch (\Exception $e) {
+            return response()->json(['available' => true]); // En caso de error, permitir continuar
+        }
+    }
+
+    /**
+     * Obtener el rol del empleado en el grupo (NUEVO MÉTODO PRIVADO)
+     */
+    private function getEmployeeRole($employeeId, $group)
+    {
+        if ($group->driver_id == $employeeId) return 'CONDUCTOR';
+        if ($group->assistant1_id == $employeeId) return 'AYUDANTE 1';
+        if ($group->assistant2_id == $employeeId) return 'AYUDANTE 2';
+        if ($group->assistant3_id == $employeeId) return 'AYUDANTE 3';
+        if ($group->assistant4_id == $employeeId) return 'AYUDANTE 4';
+        if ($group->assistant5_id == $employeeId) return 'AYUDANTE 5';
+        
+        return 'EMPLEADO';
     }
 }
