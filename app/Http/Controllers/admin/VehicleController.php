@@ -161,11 +161,16 @@ class VehicleController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-     public function edit(string $id)
+    public function edit(string $id)
     {
         $vehicle = Vehicle::find($id);
+        if (!$vehicle) {
+            return response()->json(['message' => 'Vehículo no encontrado'], 404);
+        }
+        
         $brands = Brand::all();
-        $models = collect(); // Colección vacía
+        // CORRECCIÓN: Cargar los modelos de la marca actual del vehículo
+        $models = BrandModel::where('brand_id', $vehicle->brand_id)->get();
         $types = VehicleType::all();
         $colors = Color::all();
         
@@ -176,56 +181,64 @@ class VehicleController extends Controller
      * Update the specified resource in storage.
      */
     public function update(Request $request, string $id)
-    {
-        try {
-            $vehicle = Vehicle::find($id);
+{
+    try {
+        $vehicle = Vehicle::find($id);
 
-            if (!$vehicle) {
-                return response()->json(['message' => 'Vehículo no encontrado.'], 404);
-            }
-
-            // Validación de los campos
-            $request->validate([
-                'name' => 'required|string|max:100',
-                'code' => 'required|string|max:100|unique:vehicles,code,' . $vehicle->id,
-                'plate' => 'required|string|max:20|unique:vehicles,plate,' . $vehicle->id,
-                'year' => 'required|integer|min:1900|max:' . (date('Y') + 1),
-                'load_capacity' => 'required|numeric|min:0',
-                'fuel_capacity' => 'required|numeric|min:0',
-                'compaction_capacity' => 'required|numeric|min:0',
-                'people_capacity' => 'required|integer|min:1',
-                'status' => 'required|in:0,1',
-                'brand_id' => 'required|exists:brands,id',
-                'model_id' => 'required|exists:brandmodels,id',
-                'type_id' => 'required|exists:vehicletypes,id',
-                'color_id' => 'required|exists:colors,id',
-                'description' => 'nullable|string'
-            ]);
-
-            // Actualizar el vehículo
-            $vehicle->update([
-                'name' => $request->name,
-                'code' => $request->code,
-                'plate' => strtoupper($request->plate),
-                'year' => $request->year,
-                'load_capacity' => $request->load_capacity,
-                'fuel_capacity' => $request->fuel_capacity,
-                'compaction_capacity' => $request->compaction_capacity,
-                'people_capacity' => $request->people_capacity,
-                'description' => $request->description,
-                'status' => $request->status,
-                'brand_id' => $request->brand_id,
-                'model_id' => $request->model_id,
-                'type_id' => $request->type_id,
-                'color_id' => $request->color_id
-            ]);
-
-            return response()->json(['message' => 'Vehículo actualizado exitosamente.'], 200);
-        } catch (\Throwable $th) {
-            Log::error('Error en la actualización de vehículo: ' . $th->getMessage());
-            return response()->json(['message' => 'Error en el proceso de actualización del vehículo.'], 500);
+        if (!$vehicle) {
+            return response()->json(['message' => 'Vehículo no encontrado.'], 404);
         }
+
+        // DEBUG: Ver datos recibidos
+        \Log::info('Datos recibidos para actualizar vehículo ID ' . $id, $request->all());
+
+        // Validación de los campos
+        $request->validate([
+            'name' => 'required|string|max:100',
+            'code' => 'required|string|max:100|unique:vehicles,code,' . $vehicle->id,
+            'plate' => 'required|string|max:20|unique:vehicles,plate,' . $vehicle->id,
+            'year' => 'required|integer|min:1900|max:' . (date('Y') + 1),
+            'load_capacity' => 'required|numeric|min:0',
+            'fuel_capacity' => 'required|numeric|min:0',
+            'compaction_capacity' => 'required|numeric|min:0',
+            'people_capacity' => 'required|integer|min:1',
+            'status' => 'required|in:0,1',
+            'brand_id' => 'required|exists:brands,id',
+            'model_id' => 'required|exists:brandmodels,id',
+            'type_id' => 'required|exists:vehicletypes,id',
+            'color_id' => 'required|exists:colors,id',
+            'description' => 'nullable|string'
+        ]);
+
+        // DEBUG: Ver datos después de validación
+        \Log::info('Datos validados:', $request->all());
+
+        // Actualizar el vehículo
+        $vehicle->update([
+            'name' => $request->name,
+            'code' => $request->code,
+            'plate' => strtoupper($request->plate),
+            'year' => $request->year,
+            'load_capacity' => $request->load_capacity,
+            'fuel_capacity' => $request->fuel_capacity,
+            'compaction_capacity' => $request->compaction_capacity,
+            'people_capacity' => $request->people_capacity,
+            'description' => $request->description,
+            'status' => $request->status,
+            'brand_id' => $request->brand_id,
+            'model_id' => $request->model_id,
+            'type_id' => $request->type_id,
+            'color_id' => $request->color_id
+        ]);
+
+        \Log::info('Vehículo actualizado exitosamente');
+
+        return response()->json(['message' => 'Vehículo actualizado exitosamente.'], 200);
+    } catch (\Throwable $th) {
+        \Log::error('Error en la actualización de vehículo: ' . $th->getMessage());
+        return response()->json(['message' => 'Error en el proceso de actualización del vehículo: ' . $th->getMessage()], 500);
     }
+}
 
     /**
      * Remove the specified resource from storage.

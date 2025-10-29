@@ -597,13 +597,22 @@
             });
         });
     </script>
-    <style>
-        .nav-sidebar .nav-treeview {
-            margin-left: 20px;
-        }
+@stop
 
-        .nav-sidebar .nav-treeview>.nav-item {
-            margin-left: 10px;
+@section('css')
+    <!-- Select2 CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <style>
+        .select2-container .select2-selection--single {
+            height: 38px !important;
+            border: 1px solid #d2d6de !important;
+            border-radius: 3px !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 36px !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 36px !important;
         }
     </style>
 @stop

@@ -15,10 +15,11 @@
         <div class="form-group">
             {!! Form::label('type_id', 'Tipo de Vehículo *') !!}
             {!! Form::select('type_id', $types->pluck('name', 'id'), null, [
-                'class' => 'form-control select2',
+                'class' => 'form-control',
                 'required',
                 'placeholder' => 'Seleccione un tipo',
-                'style' => 'width: 100%;'
+                'style' => 'width: 100%;',
+                'id' => 'type_id'
             ]) !!}
         </div>
     </div>
@@ -69,10 +70,11 @@
         <div class="form-group">
             {!! Form::label('color_id', 'Color *') !!}
             {!! Form::select('color_id', $colors->pluck('name', 'id'), null, [
-                'class' => 'form-control select2',
+                'class' => 'form-control',
                 'required',
                 'placeholder' => 'Seleccione un color',
-                'style' => 'width: 100%;'
+                'style' => 'width: 100%;',
+                'id' => 'color_id'
             ]) !!}
         </div>
     </div>
@@ -84,7 +86,7 @@
         <div class="form-group">
             {!! Form::label('brand_id', 'Marca *') !!}
             {!! Form::select('brand_id', $brands->pluck('name', 'id'), null, [
-                'class' => 'form-control select2',
+                'class' => 'form-control',
                 'required',
                 'placeholder' => 'Seleccione una marca',
                 'style' => 'width: 100%;',
@@ -95,9 +97,9 @@
     <div class="col-md-6">
         <div class="form-group">
             {!! Form::label('model_id', 'Modelo *') !!}
-            <select name="model_id" id="model_id" class="form-control select2" required style="width: 100%;" 
-                    data-placeholder="Primero seleccione una marca" disabled>
-                <option value="">Primero seleccione una marca</option>
+            <select name="model_id" id="model_id" class="form-control" required style="width: 100%;" 
+                    data-placeholder="Seleccione un modelo">
+                <option value="">Seleccione un modelo</option>
                 @if(isset($vehicle) && $vehicle->brand_id)
                     @foreach(\App\Models\BrandModel::where('brand_id', $vehicle->brand_id)->get() as $model)
                         <option value="{{ $model->id }}" {{ $vehicle->model_id == $model->id ? 'selected' : '' }}>
@@ -179,7 +181,7 @@
     </div>
 </div>
 
-<!-- Estado -->
+<!-- Estado CORREGIDO -->
 <div class="row">
     <div class="col-md-6">
         <div class="form-group">
@@ -187,30 +189,17 @@
             {!! Form::select('status', [
                 1 => 'Activo',
                 0 => 'Inactivo'
-            ], null, [
-                'class' => 'form-control select2',
+            ], isset($vehicle) ? $vehicle->status : null, [
+                'class' => 'form-control',
                 'required',
-                'style' => 'width: 100%;'
+                'style' => 'width: 100%;',
+                'id' => 'status'
             ]) !!}
         </div>
     </div>
 </div>
 
 <style>
-.select2-container .select2-selection--single {
-    height: 38px !important;
-    border: 1px solid #d2d6de !important;
-    border-radius: 3px !important;
-}
-
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-    line-height: 36px !important;
-}
-
-.select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: 36px !important;
-}
-
 .form-group {
     margin-bottom: 1.5rem;
 }
@@ -233,15 +222,21 @@ label {
     margin-bottom: 8px;
     display: block;
 }
+
+/* Estilos para cuando el select está deshabilitado */
+select:disabled {
+    background-color: #f8f9fa;
+    opacity: 0.7;
+    cursor: not-allowed;
+}
 </style>
 
 <script>
-// Cargar modelos cuando cambia la marca
-$('#brand_id').change(function() {
-    var brandId = $(this).val();
+// Función para cargar modelos basados en la marca seleccionada
+function loadModelsByBrand(brandId, selectedModelId = null) {
     var modelSelect = $('#model_id');
     
-    console.log('Marca cambiada:', brandId);
+    console.log('Cargando modelos para marca:', brandId, 'Modelo seleccionado:', selectedModelId);
     
     if (brandId) {
         modelSelect.html('<option value="">Cargando modelos...</option>');
@@ -268,30 +263,92 @@ $('#brand_id').change(function() {
                 }
                 
                 modelSelect.prop('disabled', false);
-                modelSelect.trigger('change');
                 
-                // Seleccionar modelo actual en edición (solo si estamos editando)
-                @if(isset($vehicle) && $vehicle->model_id)
-                    // Solo seleccionar si la marca coincide
-                    @if($vehicle->brand_id)
-                        if (brandId == '{{ $vehicle->brand_id }}') {
-                            setTimeout(function() {
-                                modelSelect.val('{{ $vehicle->model_id }}').trigger('change');
-                            }, 100);
-                        }
-                    @endif
-                @endif
+                // Seleccionar el modelo si se proporcionó uno
+                if (selectedModelId) {
+                    setTimeout(function() {
+                        modelSelect.val(selectedModelId).trigger('change');
+                    }, 100);
+                }
             },
             error: function(xhr, status, error) {
                 console.error('Error en AJAX:', error);
-                console.log('Respuesta del servidor:', xhr.responseText);
                 modelSelect.html('<option value="">Error al cargar modelos</option>');
                 modelSelect.prop('disabled', false);
             }
         });
     } else {
-        modelSelect.html('<option value="">Primero seleccione una marca</option>');
+        modelSelect.html('<option value="">Seleccione una marca primero</option>');
         modelSelect.prop('disabled', true);
     }
+}
+
+// Cargar modelos cuando cambia la marca
+$('#brand_id').change(function() {
+    var brandId = $(this).val();
+    loadModelsByBrand(brandId);
+});
+
+// Inicializar cuando el documento esté listo
+$(document).ready(function() {
+    console.log('Formulario de edición cargado');
+    
+    // Si estamos en edición, configurar automáticamente la marca y modelo
+    @if(isset($vehicle) && $vehicle->brand_id)
+        console.log('Editando vehículo - Marca:', '{{ $vehicle->brand_id }}', 'Modelo:', '{{ $vehicle->model_id }}');
+        
+        // Establecer la marca actual
+        $('#brand_id').val('{{ $vehicle->brand_id }}');
+        
+        // Si ya hay modelos precargados en el select, solo habilitarlo
+        // Si no, cargar los modelos via AJAX
+        var modelSelect = $('#model_id');
+        var hasPreloadedModels = modelSelect.find('option[value!=""]').length > 1; // Más de 1 opción (excluyendo el placeholder)
+        
+        if (hasPreloadedModels) {
+            console.log('Modelos ya precargados, habilitando select');
+            modelSelect.prop('disabled', false);
+            // Ya debería estar seleccionado el modelo correcto por el blade
+        } else {
+            console.log('Cargando modelos via AJAX');
+            // Cargar los modelos para esta marca específica
+            loadModelsByBrand('{{ $vehicle->brand_id }}', '{{ $vehicle->model_id }}');
+        }
+    @else
+        // Para crear nuevo, el modelo empieza deshabilitado
+        $('#model_id').prop('disabled', true);
+    @endif
+    
+    // También establecer otros valores que puedan necesitarse
+    @if(isset($vehicle))
+        // Asegurar que el estado esté seleccionado
+        $('#status').val('{{ $vehicle->status }}');
+        
+        // Asegurar que otros selects tengan sus valores
+        $('#type_id').val('{{ $vehicle->type_id }}');
+        $('#color_id').val('{{ $vehicle->color_id }}');
+    @endif
+});
+
+// También inicializar cuando se muestre el modal (por si acaso)
+$(document).on('shown.bs.modal', '#modal', function() {
+    console.log('Modal mostrado - verificando formulario de edición');
+    
+    @if(isset($vehicle) && $vehicle->brand_id)
+        // Verificar que el modelo esté habilitado y tenga el valor correcto
+        var modelSelect = $('#model_id');
+        if (modelSelect.prop('disabled')) {
+            console.log('Modelo aún deshabilitado, habilitando...');
+            modelSelect.prop('disabled', false);
+        }
+        
+        // Verificar que el valor del modelo esté seleccionado
+        var currentModelValue = modelSelect.val();
+        var expectedModelValue = '{{ $vehicle->model_id }}';
+        if (currentModelValue !== expectedModelValue) {
+            console.log('Corrigiendo valor del modelo:', currentModelValue, '->', expectedModelValue);
+            modelSelect.val(expectedModelValue);
+        }
+    @endif
 });
 </script>
