@@ -227,18 +227,6 @@
                             <div class="map-container position-relative">
                                 <div id="mapView" style="height: 550px; width: 100%;"></div>
 
-                                <!-- Loading Overlay -->
-                                <div id="mapLoading"
-                                    class="position-absolute top-0 start-0 w-100 h-100 bg-white d-flex align-items-center justify-content-center"
-                                    style="display: none !important; z-index: 1000;">
-                                    <div class="text-center">
-                                        <div class="spinner-border text-primary mb-2" role="status">
-                                            <span class="sr-only">Cargando...</span>
-                                        </div>
-                                        <p class="text-muted mb-0">Cargando zonas...</p>
-                                    </div>
-                                </div>
-
                                 <!-- Información de Zona Hover -->
                                 <div id="zoneTooltip" class="position-absolute bg-white border rounded shadow-sm p-2"
                                     style="display: none; z-index: 1000; max-width: 300px;"></div>
@@ -1096,19 +1084,19 @@
                                         </thead>
                                         <tbody>
                                             ${zone.coordinates ? zone.coordinates.map((coord, index) => `
-                                                    <tr class="border-bottom">
-                                                        <td class="text-center text-muted font-weight-bold">${index + 1}</td>
-                                                        <td class="font-monospace">${parseFloat(coord.latitude).toFixed(6)}</td>
-                                                        <td class="font-monospace">${parseFloat(coord.longitude).toFixed(6)}</td>
-                                                    </tr>
-                                                `).join('') : `
-                                                    <tr>
-                                                        <td colspan="3" class="text-center text-muted py-4">
-                                                            <i class="fas fa-map-marker-alt fa-2x mb-2 d-block"></i>
-                                                            No hay coordenadas registradas
-                                                        </td>
-                                                    </tr>
-                                                `}
+                                                        <tr class="border-bottom">
+                                                            <td class="text-center text-muted font-weight-bold">${index + 1}</td>
+                                                            <td class="font-monospace">${parseFloat(coord.latitude).toFixed(6)}</td>
+                                                            <td class="font-monospace">${parseFloat(coord.longitude).toFixed(6)}</td>
+                                                        </tr>
+                                                    `).join('') : `
+                                                        <tr>
+                                                            <td colspan="3" class="text-center text-muted py-4">
+                                                                <i class="fas fa-map-marker-alt fa-2x mb-2 d-block"></i>
+                                                                No hay coordenadas registradas
+                                                            </td>
+                                                        </tr>
+                                                    `}
                                         </tbody>
                                     </table>
                                 </div>
@@ -1210,7 +1198,7 @@
                                 }).addTo(mapZoneInstance)
                                 .bindPopup(
                                     '<div class="text-center"><strong>Centro de la zona</strong></div>'
-                                    );
+                                );
 
                             // Forzar tamaño del mapa
                             setTimeout(() => {
@@ -1289,8 +1277,8 @@
     </script>
 
     <!-- ============================================================
-                    DEPENDENCIAS LEAFLET
-                    ============================================================= -->
+                        DEPENDENCIAS LEAFLET
+                        ============================================================= -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
