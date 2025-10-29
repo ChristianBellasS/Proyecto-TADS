@@ -144,7 +144,7 @@
 
     // Rutas para buscar empleados en el modulo de turnos
     Route::get('admin/employeegroups/search/employees', [EmployeeGroupController::class, 'searchEmployees'])->name('admin.employeegroups.search.employees');
-
+    Route::get('admin/employeegroups/check-employee', [EmployeeGroupController::class, 'checkEmployeeAvailability'])->name('admin.employeegroups.check-employee');
     // PROGRAMACIÓN
 
     Route::get('/scheduling', [SchedulingController::class, 'index'])->name('admin.scheduling.index');
