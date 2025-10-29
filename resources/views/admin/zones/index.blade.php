@@ -225,7 +225,7 @@
 
                             <!-- Contenedor del Mapa -->
                             <div class="map-container position-relative">
-                                <div id="mapView" style="height: 550px; width: 100%;"></div>
+                                <div id="mapView" style="height: 630px; width: 100%;"></div>
 
                                 <!-- Información de Zona Hover -->
                                 <div id="zoneTooltip" class="position-absolute bg-white border rounded shadow-sm p-2"
