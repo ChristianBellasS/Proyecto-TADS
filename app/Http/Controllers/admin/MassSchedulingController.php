@@ -15,6 +15,7 @@ use App\Models\Contract;
 use App\Models\Employee;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class MassSchedulingController extends Controller
 {
@@ -131,7 +132,11 @@ class MassSchedulingController extends Controller
         $errors = array_merge($errors, $employeeValidations['errors']);
         $warnings = array_merge($warnings, $employeeValidations['warnings']);
 
-        // 5. Validar superposición con programaciones existentes
+        // 5. Validar duplicados (EVITAR MISMO TURNO + MISMA ZONA + MISMA FECHA)
+        $duplicateErrors = $this->checkDuplicateSchedules($group, $startDate, $endDate);
+        $errors = array_merge($errors, $duplicateErrors);
+
+        // 6. Validar superposición con programaciones existentes del mismo grupo
         $schedulingConflicts = $this->checkExistingSchedules($groupId, $startDate, $endDate);
         if (!empty($schedulingConflicts)) {
             $warnings[] = "El grupo ya tiene programaciones en las siguientes fechas: " . implode(', ', $schedulingConflicts);
@@ -150,6 +155,70 @@ class MassSchedulingController extends Controller
             'uncovered_days' => $uncoveredDays,
             'employee_details' => $employeeValidations['details']
         ];
+    }
+
+    /**
+     * VALIDAR DUPLICADOS - Evitar mismo turno + misma zona + misma fecha
+     */
+    private function checkDuplicateSchedules($group, $startDate, $endDate)
+    {
+        $errors = [];
+        
+        $workDays = $group->days;
+        if (empty($workDays)) {
+            return $errors;
+        }
+
+        // Convertir días del grupo a array
+        $groupDaysArray = array_map('trim', explode(',', $workDays));
+        
+        // Mapear nombres de días en español a inglés
+        $dayMapping = [
+            'Lunes' => 'Monday',
+            'Martes' => 'Tuesday', 
+            'Miércoles' => 'Wednesday',
+            'Miercoles' => 'Wednesday',
+            'Jueves' => 'Thursday',
+            'Viernes' => 'Friday',
+            'Sábado' => 'Saturday',
+            'Sabado' => 'Saturday',
+            'Domingo' => 'Sunday'
+        ];
+
+        $availableDays = [];
+        foreach ($groupDaysArray as $day) {
+            if (isset($dayMapping[$day])) {
+                $availableDays[] = $dayMapping[$day];
+            }
+        }
+
+        // Verificar cada día en el rango de fechas
+        $currentDate = $startDate->copy();
+        while ($currentDate <= $endDate) {
+            $dayOfWeek = $currentDate->format('l');
+            
+            // Solo verificar si es día laboral del grupo
+            if (in_array($dayOfWeek, $availableDays)) {
+                $dateString = $currentDate->format('Y-m-d');
+
+                // VERIFICAR SI YA EXISTE PROGRAMACIÓN PARA ESTE TURNO + ZONA + FECHA
+                $existingScheduling = Scheduling::where('date', $dateString)
+                    ->where('shift_id', $group->shift_id)
+                    ->whereHas('group', function($query) use ($group) {
+                        $query->where('zone_id', $group->zone_id);
+                    })
+                    ->exists();
+
+                if ($existingScheduling) {
+                    $displayDate = $currentDate->format('d/m/Y');
+                    $errors[] = "Ya existe programación para {$displayDate} en {$group->zone->name} - Turno {$group->shift->name}";
+                }
+            }
+
+            $currentDate->addDay();
+        }
+
+        return $errors;
     }
 
     private function validateGroupDays($group, $startDate, $endDate)
@@ -191,7 +260,7 @@ class MassSchedulingController extends Controller
         // Verificar cada día en el rango de fechas
         $currentDate = $startDate->copy();
         while ($currentDate <= $endDate) {
-            $dayOfWeek = $currentDate->format('l'); // Monday, Tuesday, etc.
+            $dayOfWeek = $currentDate->format('l');
             
             if (!in_array($dayOfWeek, $availableDays)) {
                 $uncoveredDays[] = $currentDate->format('d/m/Y') . " (" . $this->getSpanishDay($dayOfWeek) . ")";
@@ -394,58 +463,84 @@ class MassSchedulingController extends Controller
 
     public function storeMassScheduling(Request $request)
     {
-        $request->validate([
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'groups' => 'required|array',
-            'groups.*.group_id' => 'required|exists:employeegroups,id',
-            'groups.*.shift_id' => 'required|exists:shifts,id',
-        ]);
+        DB::beginTransaction();
+        
+        try {
+            $request->validate([
+                'start_date' => 'required|date',
+                'end_date' => 'required|date|after_or_equal:start_date',
+                'groups' => 'required|array',
+                'groups.*.group_id' => 'required|exists:employeegroups,id',
+                'groups.*.shift_id' => 'required|exists:shifts,id',
+            ]);
 
-        $startDate = Carbon::parse($request->start_date);
-        $endDate = Carbon::parse($request->end_date);
-        $groupsData = $request->groups;
+            $startDate = Carbon::parse($request->start_date);
+            $endDate = Carbon::parse($request->end_date);
+            $groupsData = $request->groups;
 
-        $createdSchedules = [];
-        $errors = [];
+            $createdSchedules = [];
+            $errors = [];
+            $totalCreated = 0;
+            $totalSkipped = 0;
 
-        foreach ($groupsData as $groupData) {
-            try {
-                $schedules = $this->createGroupSchedules(
-                    $groupData['group_id'],
-                    $groupData['shift_id'],
-                    $startDate,
-                    $endDate,
-                    $groupData
-                );
+            foreach ($groupsData as $groupData) {
+                try {
+                    $result = $this->createGroupSchedules(
+                        $groupData['group_id'],
+                        $groupData['shift_id'],
+                        $startDate,
+                        $endDate,
+                        $groupData
+                    );
 
-                $createdSchedules = array_merge($createdSchedules, $schedules);
-            } catch (\Exception $e) {
-                $errors[] = "Error al programar grupo {$groupData['group_id']}: " . $e->getMessage();
+                    $createdSchedules = array_merge($createdSchedules, $result['schedules']);
+                    $totalCreated += $result['created'];
+                    $totalSkipped += $result['skipped'];
+                    
+                } catch (\Exception $e) {
+                    $errors[] = "Error al programar grupo {$groupData['group_id']}: " . $e->getMessage();
+                }
             }
-        }
 
-        if (!empty($errors)) {
+            if (!empty($errors)) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Algunas programaciones no pudieron ser creadas',
+                    'errors' => $errors,
+                    'created_count' => $totalCreated,
+                    'skipped_count' => $totalSkipped
+                ], 422);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Programación masiva completada: {$totalCreated} programaciones creadas, {$totalSkipped} omitidas (duplicados)",
+                'created_count' => $totalCreated,
+                'skipped_count' => $totalSkipped,
+                'schedules' => $createdSchedules
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Algunas programaciones no pudieron ser creadas',
-                'errors' => $errors,
-                'created_count' => count($createdSchedules)
-            ], 422);
+                'message' => 'Error al crear programación masiva: ' . $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Programación masiva creada exitosamente',
-            'created_count' => count($createdSchedules),
-            'schedules' => $createdSchedules
-        ]);
     }
 
+    /**
+     * CREAR PROGRAMACIONES EVITANDO DUPLICADOS (mismo turno + misma zona + misma fecha)
+     */
     private function createGroupSchedules($groupId, $shiftId, $startDate, $endDate, $groupData)
     {
-        $group = EmployeeGroup::find($groupId);
+        $group = EmployeeGroup::with(['zone', 'shift'])->find($groupId);
         $schedules = [];
+        $created = 0;
+        $skipped = 0;
         $currentDate = $startDate->copy();
 
         // Obtener días disponibles del grupo
@@ -477,19 +572,36 @@ class MassSchedulingController extends Controller
             
             // Solo crear programación si el día está disponible para el grupo
             if (in_array($dayOfWeek, $availableDays)) {
-                // Verificar si ya existe una programación para esta fecha
-                $existing = Scheduling::where('group_id', $groupId)
-                    ->where('date', $currentDate->format('Y-m-d'))
+                $dateString = $currentDate->format('Y-m-d');
+
+                // VERIFICAR DUPLICADO: mismo turno + misma zona + misma fecha
+                $existingScheduling = Scheduling::where('date', $dateString)
+                    ->where('shift_id', $shiftId)
+                    ->whereHas('group', function($query) use ($group) {
+                        $query->where('zone_id', $group->zone_id);
+                    })
+                    ->exists();
+
+                if ($existingScheduling) {
+                    // Saltar esta fecha - ya existe programación para este turno y zona
+                    $skipped++;
+                    $currentDate->addDay();
+                    continue;
+                }
+
+                // Verificar si ya existe una programación para este grupo específico
+                $existingForGroup = Scheduling::where('group_id', $groupId)
+                    ->where('date', $dateString)
                     ->first();
 
-                if (!$existing) {
+                if (!$existingForGroup) {
                     $scheduling = Scheduling::create([
                         'group_id' => $groupId,
                         'shift_id' => $shiftId,
                         'vehicle_id' => $group->vehicle_id,
-                        'date' => $currentDate->format('Y-m-d'),
+                        'date' => $dateString,
                         'status' => 'active',
-                        'notes' => 'Programación masiva'
+                        'notes' => 'Programación masiva - ' . now()->format('d/m/Y H:i')
                     ]);
 
                     // Crear detalles del grupo - Conductor SELECCIONADO
@@ -521,13 +633,20 @@ class MassSchedulingController extends Controller
                     }
 
                     $schedules[] = $scheduling;
+                    $created++;
+                } else {
+                    $skipped++;
                 }
             }
 
             $currentDate->addDay();
         }
 
-        return $schedules;
+        return [
+            'schedules' => $schedules,
+            'created' => $created,
+            'skipped' => $skipped
+        ];
     }
     
     public function validateEmployeeAvailability(Request $request)
