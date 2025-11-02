@@ -132,4 +132,9 @@ class EmployeeGroup extends Model
     {
         return $query->where('status', 'active');
     }
+
+    public function configGroups()
+    {
+        return $this->hasMany(ConfigGroup::class, 'employeegroup_id');
+    }
 }
