@@ -221,3 +221,11 @@
 
     //TURNOS
     // Route::resource('shifts', ShiftController::class)->names('admin.shifts');
+
+    
+   // Programación masiva
+    Route::get('mass-scheduling', [MassSchedulingController::class, 'index'])->name('admin.mass-scheduling.index');
+    Route::post('/mass-scheduling/validate', [MassSchedulingController::class, 'validateMassScheduling'])->name('admin.mass-scheduling.validate');
+    Route::post('/mass-scheduling/store', [MassSchedulingController::class, 'storeMassScheduling'])->name('admin.mass-scheduling.store');
+    Route::post('/mass-scheduling/validate-employee', [MassSchedulingController::class, 'validateEmployeeAvailability'])->name('admin.mass-scheduling.validate-employee');
+    Route::get('/mass-scheduling/available-employees', [MassSchedulingController::class, 'getAvailableEmployees'])->name('admin.mass-scheduling.available-employees');
