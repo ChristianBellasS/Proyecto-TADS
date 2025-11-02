@@ -20,22 +20,18 @@
                         <div class="input-group">
                             <input type="date" class="form-control" id="start_date" name="start_date" required>
                             <div class="input-group-append">
-                                <span class="input-group-text bg-light">
-                                    dd/mm/aaaa
-                                </span>
+                                <span class="input-group-text bg-light">dd/mm/aaaa</span>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="form-group">
-                        <label class="font-weight-bold">Fecha de fin:</label>
+                        <label class="font-weight-bold">Fecha de fin: *</label>
                         <div class="input-group">
-                            <input type="date" class="form-control" id="end_date" name="end_date">
+                            <input type="date" class="form-control" id="end_date" name="end_date" required>
                             <div class="input-group-append">
-                                <span class="input-group-text bg-light">
-                                    dd/mm/aaaa
-                                </span>
+                                <span class="input-group-text bg-light">dd/mm/aaaa</span>
                             </div>
                         </div>
                     </div>
@@ -51,22 +47,15 @@
                 </div>
             </div>
 
-            <!-- Filtros de Turnos -->
+            <!-- Filtros de Turnos CORREGIDO -->
             <div class="mb-4">
                 <h6 class="font-weight-bold mb-3">Filtrar por Turno:</h6>
                 <div class="d-flex flex-wrap gap-2" id="turnsContainer">
-                    <button type="button" class="btn btn-outline-primary turn-btn active" data-turn="all">
-                        Todos los Turnos
-                    </button>
-                    <button type="button" class="btn btn-outline-primary turn-btn" data-turn="Mañana">
-                        Mañana
-                    </button>
-                    <button type="button" class="btn btn-outline-primary turn-btn" data-turn="Tarde">
-                        Tarde
-                    </button>
-                    <button type="button" class="btn btn-outline-primary turn-btn" data-turn="Noche">
-                        Noche
-                    </button>
+                    <button type="button" class="btn btn-outline-primary turn-btn active" data-turn="all">Todos los
+                        Turnos</button>
+                    <button type="button" class="btn btn-outline-primary turn-btn" data-turn="Mañana">Mañana</button>
+                    <button type="button" class="btn btn-outline-primary turn-btn" data-turn="Tarde">Tarde</button>
+                    <button type="button" class="btn btn-outline-primary turn-btn" data-turn="Noche">Noche</button>
                 </div>
             </div>
 
@@ -93,7 +82,8 @@
                                 </div>
                                 <div class="mb-2">
                                     <strong>Turno:</strong>
-                                    <span class="badge badge-info ml-2 turn-badge">{{ $group->shift->name ?? 'Sin turno' }}</span>
+                                    <span
+                                        class="badge badge-info ml-2 turn-badge">{{ $group->shift->name ?? 'Sin turno' }}</span>
                                     <input type="hidden" name="groups[{{ $group->id }}][shift_id]"
                                         value="{{ $group->shift_id }}">
                                 </div>
@@ -111,7 +101,7 @@
                                 </div>
 
                                 <div class="mt-3">
-                                    <!-- Conductor con validación individual -->
+                                    <!-- Conductor -->
                                     <div class="mb-2">
                                         <strong>Conductor:</strong>
                                         <select class="form-control mt-1 driver-select employee-select"
@@ -120,8 +110,7 @@
                                             <option value="">Seleccione conductor</option>
                                             @foreach ($employees->where('employeetype_id', 1) as $employee)
                                                 <option value="{{ $employee->id }}"
-                                                    {{ $group->driver_id == $employee->id ? 'selected' : '' }}
-                                                    data-employee-name="{{ $employee->name }} {{ $employee->last_name }}">
+                                                    {{ $group->driver_id == $employee->id ? 'selected' : '' }}>
                                                     {{ $employee->name }} {{ $employee->last_name }}
                                                 </option>
                                             @endforeach
@@ -130,67 +119,35 @@
                                             style="display: none;"></div>
                                     </div>
 
-                                    <!-- Ayudante 1 con validación individual -->
-                                    <div class="mb-2">
-                                        <strong>Ayudante 1:</strong>
-                                        <select class="form-control mt-1 assistant-select employee-select"
-                                            name="groups[{{ $group->id }}][assistant1_id]" data-role="ayudante1"
-                                            data-group-id="{{ $group->id }}">
-                                            <option value="">Seleccione ayudante</option>
-                                            @foreach ($employees->where('employeetype_id', 2) as $employee)
-                                                <option value="{{ $employee->id }}"
-                                                    {{ $group->assistant1_id == $employee->id ? 'selected' : '' }}
-                                                    data-employee-name="{{ $employee->name }} {{ $employee->last_name }}">
-                                                    {{ $employee->name }} {{ $employee->last_name }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                        <div class="employee-validation-result mt-1" data-role="ayudante1"
-                                            style="display: none;"></div>
-                                    </div>
-
-                                    <!-- Ayudante 2 con validación individual -->
-                                    <div class="mb-2">
-                                        <strong>Ayudante 2:</strong>
-                                        <select class="form-control mt-1 assistant-select employee-select"
-                                            name="groups[{{ $group->id }}][assistant2_id]" data-role="ayudante2"
-                                            data-group-id="{{ $group->id }}">
-                                            <option value="">Seleccione ayudante</option>
-                                            @foreach ($employees->where('employeetype_id', 2) as $employee)
-                                                <option value="{{ $employee->id }}"
-                                                    {{ $group->assistant2_id == $employee->id ? 'selected' : '' }}
-                                                    data-employee-name="{{ $employee->name }} {{ $employee->last_name }}">
-                                                    {{ $employee->name }} {{ $employee->last_name }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                        <div class="employee-validation-result mt-1" data-role="ayudante2"
-                                            style="display: none;"></div>
-                                    </div>
-
-                                    @if ($group->assistant3_id)
-                                        <!-- Ayudante 3 con validación individual -->
-                                        <div class="mb-2">
-                                            <strong>Ayudante 3:</strong>
-                                            <select class="form-control mt-1 assistant-select employee-select"
-                                                name="groups[{{ $group->id }}][assistant3_id]"
-                                                data-role="ayudante3" data-group-id="{{ $group->id }}">
-                                                <option value="">Seleccione ayudante</option>
-                                                @foreach ($employees->where('employeetype_id', 2) as $employee)
-                                                    <option value="{{ $employee->id }}"
-                                                        {{ $group->assistant3_id == $employee->id ? 'selected' : '' }}
-                                                        data-employee-name="{{ $employee->name }} {{ $employee->last_name }}">
-                                                        {{ $employee->name }} {{ $employee->last_name }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                            <div class="employee-validation-result mt-1" data-role="ayudante3"
-                                                style="display: none;"></div>
-                                        </div>
-                                    @endif
+                                    <!-- Ayudantes -->
+                                    @for ($i = 1; $i <= 5; $i++)
+                                        @php
+                                            $assistantField = "assistant{$i}_id";
+                                            $assistantValue = $group->$assistantField;
+                                        @endphp
+                                        @if ($i <= 2 || $assistantValue)
+                                            <div class="mb-2">
+                                                <strong>Ayudante {{ $i }}:</strong>
+                                                <select class="form-control mt-1 assistant-select employee-select"
+                                                    name="groups[{{ $group->id }}][assistant{{ $i }}_id]"
+                                                    data-role="ayudante{{ $i }}"
+                                                    data-group-id="{{ $group->id }}">
+                                                    <option value="">Seleccione ayudante</option>
+                                                    @foreach ($employees->where('employeetype_id', 2) as $employee)
+                                                        <option value="{{ $employee->id }}"
+                                                            {{ $assistantValue == $employee->id ? 'selected' : '' }}>
+                                                            {{ $employee->name }} {{ $employee->last_name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                <div class="employee-validation-result mt-1"
+                                                    data-role="ayudante{{ $i }}" style="display: none;">
+                                                </div>
+                                            </div>
+                                        @endif
+                                    @endfor
                                 </div>
 
-                                <!-- Validación general del grupo -->
                                 <div class="group-validation-result mt-2" style="display: none;"></div>
                             </div>
                         </div>
@@ -376,40 +333,56 @@
     $(document).ready(function() {
         let validationResults = null;
         const deletedGroups = new Set();
+        let originalGroupsHTML = null; // VARIABLE GLOBAL PARA GUARDAR EL HTML ORIGINAL
 
-        // FILTRO CORREGIDO Y FUNCIONANDO
+        // FILTRO GUARDAR HTML ORIGINAL
         function initializeTurnFilter() {
+            // GUARDAR EL HTML ORIGINAL SOLO LA PRIMERA VEZ
+            if (!originalGroupsHTML) {
+                originalGroupsHTML = $('#groupsContainer').html();
+                console.log('💾 HTML original guardado');
+            }
+
             $('.turn-btn').off('click').on('click', function() {
                 const turn = $(this).data('turn');
                 
-                console.log('Filtrando por turno:', turn);
+                console.log('🎯 FILTRANDO POR TURNO:', turn);
                 
                 // Actualizar botones activos
                 $('.turn-btn').removeClass('active');
                 $(this).addClass('active');
 
                 if (turn === 'all') {
-                    // Mostrar todos los grupos
-                    $('.group-item').show();
+                    // RESTAURAR DESDE EL HTML ORIGINAL GUARDADO
+                    $('#groupsContainer').html(originalGroupsHTML);
+                    console.log('Mostrando TODOS los grupos');
                 } else {
-                    // Ocultar todos primero
-                    $('.group-item').hide();
+                    // FILTRAR DESDE EL HTML ORIGINAL GUARDADO
+                    let filteredHTML = '';
                     
-                    // Mostrar solo los grupos que tienen el turno seleccionado
-                    $('.group-item').each(function() {
-                        const groupTurn = $(this).data('turn');
-                        console.log('Grupo ID:', $(this).data('group-id'), 'Turno:', groupTurn);
+                    // Crear elemento temporal con el HTML original
+                    const tempDiv = $('<div>').html(originalGroupsHTML);
+                    
+                    $('.group-item', tempDiv).each(function() {
+                        const $group = $(this);
+                        const turnBadge = $group.find('.badge-info');
+                        const groupTurn = turnBadge.text().trim();
+                        
+                        console.log('Grupo:', $group.find('h6').text().trim(), 'Turno:', groupTurn);
                         
                         if (groupTurn === turn) {
-                            $(this).show();
+                            filteredHTML += $group[0].outerHTML;
+                            console.log('INCLUYENDO:', $group.find('h6').text().trim());
                         }
                     });
+                    
+                    $('#groupsContainer').html(filteredHTML);
+                    console.log(`Grupos mostrados: ${$('.group-item').length}`);
                 }
                 
-                // Reajustar el layout después de filtrar
-                setTimeout(() => {
-                    $('#groupsContainer').masonry?.('layout');
-                }, 100);
+                // 🔥 RE-INICIALIZAR EVENTOS DESPUÉS DE CAMBIAR EL HTML
+                initializeGroupEvents();
+                console.log('Eventos re-inicializados');
             });
         }
 
@@ -452,14 +425,48 @@
 
                 if (!employeeId || !startDate) return;
 
-                validateIndividualEmployee(employeeId, role, startDate, endDate, $(this),
-                    validationResult);
+                validateIndividualEmployee(employeeId, role, startDate, endDate, $(this), validationResult);
             });
         }
 
+        // APLICAR FILTRO INICIAL USANDO EL HTML ORIGINAL
+        function applyInitialFilter() {
+            console.log('APLICANDO FILTRO INICIAL...');
+            const activeTurn = $('.turn-btn.active').data('turn');
+            console.log('Turno activo inicial:', activeTurn);
+            
+            // GUARDAR HTML ORIGINAL SI NO ESTÁ GUARDADO
+            if (!originalGroupsHTML) {
+                originalGroupsHTML = $('#groupsContainer').html();
+                console.log('💾 HTML original guardado en filtro inicial');
+            }
+            
+            if (activeTurn !== 'all') {
+                let filteredHTML = '';
+                
+                // Crear elemento temporal con el HTML original
+                const tempDiv = $('<div>').html(originalGroupsHTML);
+                
+                $('.group-item', tempDiv).each(function() {
+                    const $group = $(this);
+                    const turnBadge = $group.find('.badge-info');
+                    const groupTurn = turnBadge.text().trim();
+                    
+                    if (groupTurn === activeTurn) {
+                        filteredHTML += $group[0].outerHTML;
+                    }
+                });
+                
+                $('#groupsContainer').html(filteredHTML);
+                console.log(`📊 Grupos mostrados inicialmente: ${$('.group-item').length}`);
+                
+                // Re-inicializar eventos
+                initializeGroupEvents();
+            }
+        }
+
         // Función para validar empleado individual
-        function validateIndividualEmployee(employeeId, role, startDate, endDate, selectElement,
-            validationElement) {
+        function validateIndividualEmployee(employeeId, role, startDate, endDate, selectElement, validationElement) {
             $.ajax({
                 url: '{{ route('admin.mass-scheduling.validate-employee') }}',
                 type: 'POST',
@@ -480,13 +487,11 @@
                     if (response.has_errors) {
                         cssClass = 'validation-error';
                         selectElement.addClass('has-error').removeClass('has-warning valid');
-                        message = '<i class="fas fa-times-circle mr-1"></i>' + response.errors.join(
-                            ', ');
+                        message = '<i class="fas fa-times-circle mr-1"></i>' + response.errors.join(', ');
                     } else if (response.has_warnings) {
                         cssClass = 'validation-warning';
                         selectElement.addClass('has-warning').removeClass('has-error valid');
-                        message = '<i class="fas fa-exclamation-triangle mr-1"></i>' + response
-                            .warnings.join(', ');
+                        message = '<i class="fas fa-exclamation-triangle mr-1"></i>' + response.warnings.join(', ');
                     } else {
                         cssClass = 'validation-success';
                         selectElement.addClass('valid').removeClass('has-error has-warning');
@@ -518,8 +523,7 @@
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
                 beforeSend: function() {
-                    $('#btnValidate').prop('disabled', true).html(
-                        '<i class="fas fa-spinner fa-spin mr-2"></i>Validando...');
+                    $('#btnValidate').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i>Validando...');
                 },
                 success: function(response) {
                     validationResults = response;
@@ -530,9 +534,7 @@
                     Swal.fire('Error', 'Ocurrió un error durante la validación', 'error');
                 },
                 complete: function() {
-                    $('#btnValidate').prop('disabled', false).html(
-                        '<i class="fas fa-check-circle mr-2"></i>Validar Disponibilidad'
-                    );
+                    $('#btnValidate').prop('disabled', false).html('<i class="fas fa-check-circle mr-2"></i>Validar Disponibilidad');
                 }
             });
         });
@@ -540,8 +542,7 @@
         // Generar programación
         $('#btnGenerate').click(function() {
             if (!validationResults || validationResults.has_errors) {
-                Swal.fire('Error', 'No se puede generar la programación con errores de validación',
-                    'error');
+                Swal.fire('Error', 'No se puede generar la programación con errores de validación', 'error');
                 return;
             }
 
@@ -568,7 +569,7 @@
                 groups: []
             };
 
-            $('.group-item:visible').each(function() {
+            $('.group-item').each(function() {
                 const groupId = $(this).data('group-id');
                 const block = $(this).find('.group-block');
 
@@ -600,6 +601,12 @@
                 return false;
             }
 
+            if (!formData.end_date) {
+                Swal.fire('Error', 'Seleccione la fecha de fin', 'error');
+                $('#end_date').focus();
+                return false;
+            }
+
             if (formData.groups.length === 0) {
                 Swal.fire('Error', 'No hay grupos activos para programar', 'error');
                 return false;
@@ -616,8 +623,7 @@
                 const hasAssistant = group.assistant1_id || group.assistant2_id || group.assistant3_id ||
                     group.assistant4_id || group.assistant5_id;
                 if (!hasAssistant) {
-                    Swal.fire('Error', 'Todos los grupos deben tener al menos un ayudante seleccionado',
-                        'error');
+                    Swal.fire('Error', 'Todos los grupos deben tener al menos un ayudante seleccionado', 'error');
                     return false;
                 }
             }
@@ -669,7 +675,7 @@
                     `;
                 }
 
-                // Mostrar errores
+                // Mostrar errores (incluye duplicados)
                 if (result.errors.length > 0) {
                     hasErrors = true;
                     alertHtml += `
@@ -744,13 +750,12 @@
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
                 beforeSend: function() {
-                    $('#btnGenerate').prop('disabled', true).html(
-                        '<i class="fas fa-spinner fa-spin mr-2"></i>Registrando...');
+                    $('#btnGenerate').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i>Registrando...');
                 },
                 success: function(response) {
                     Swal.fire({
                         title: '¡Éxito!',
-                        text: response.message,
+                        text: response.message + ` (${response.created_count} creadas, ${response.skipped_count} omitidas por duplicados)`,
                         icon: 'success',
                         confirmButtonText: 'Aceptar'
                     }).then(() => {
@@ -759,10 +764,8 @@
                 },
                 error: function(xhr) {
                     const response = xhr.responseJSON;
-                    Swal.fire('Error', response.message || 'Error al generar la programación',
-                        'error');
-                    $('#btnGenerate').prop('disabled', false).html(
-                        '<i class="fas fa-calendar-plus mr-2"></i>Registrar Programación');
+                    Swal.fire('Error', response.message || 'Error al generar la programación', 'error');
+                    $('#btnGenerate').prop('disabled', false).html('<i class="fas fa-calendar-plus mr-2"></i>Registrar Programación');
                 }
             });
         }
@@ -779,5 +782,8 @@
         // INICIALIZAR EVENTOS AL CARGAR
         initializeGroupEvents();
         initializeTurnFilter();
+        
+        // APLICAR FILTRO INICIAL
+        setTimeout(applyInitialFilter, 300);
     });
 </script>
