@@ -12,7 +12,8 @@
             {!! Form::select('shift_id', $shifts->pluck('name', 'id'), null, [
                 'class' => 'form-control',
                 'required',
-                'placeholder' => 'Seleccione un turno'
+                'placeholder' => 'Seleccione un turno',
+                'onchange' => 'checkZoneShiftAvailability()'
             ]) !!}
         </div>
     </div>
@@ -25,7 +26,8 @@
             {!! Form::select('zone_id', $zones->pluck('name', 'id'), null, [
                 'class' => 'form-control',
                 'required',
-                'placeholder' => 'Seleccione una zona'
+                'placeholder' => 'Seleccione una zona',
+                'onchange' => 'checkZoneShiftAvailability()'
             ]) !!}
         </div>
     </div>
@@ -60,6 +62,12 @@
             <small class="form-text text-muted" id="capacity_info"></small>
         </div>
     </div>
+</div>
+
+<!-- Mensaje de advertencia para zona y turno -->
+<div id="zone_shift_warning" class="alert alert-warning d-none mt-2">
+    <i class="fas fa-exclamation-triangle"></i>
+    <span id="zone_shift_message"></span>
 </div>
 
 <div class="form-group">
@@ -127,8 +135,59 @@
 </div>
 
 <script>
-// Variable global para controlar empleados con conflictos
-let conflictedEmployees = new Set();
+// Variables globales para controlar conflictos
+if (typeof conflictedEmployees === 'undefined') {
+    var conflictedEmployees = new Set();
+}
+if (typeof zoneShiftConflict === 'undefined') {
+    var zoneShiftConflict = false;
+}
+
+// Función para verificar disponibilidad de zona y turno
+function checkZoneShiftAvailability() {
+    const zoneId = document.getElementById('zone_id').value;
+    const shiftId = document.getElementById('shift_id').value;
+    const warningDiv = document.getElementById('zone_shift_warning');
+    const messageSpan = document.getElementById('zone_shift_message');
+    
+    if (!zoneId || !shiftId) {
+        warningDiv.classList.add('d-none');
+        zoneShiftConflict = false;
+        updateSubmitButton();
+        return;
+    }
+
+    const currentGroupId = @if(isset($group) && $isEdit) {{ $group->id }} @else null @endif;
+
+    $.ajax({
+        url: '{{ route("admin.employeegroups.check-zone-shift") }}',
+        type: 'GET',
+        data: {
+            zone_id: zoneId,
+            shift_id: shiftId,
+            current_group_id: currentGroupId
+        },
+        success: function(response) {
+            if (!response.available) {
+                // Mostrar advertencia
+                messageSpan.textContent = response.message;
+                warningDiv.classList.remove('d-none');
+                zoneShiftConflict = true;
+            } else {
+                // Ocultar advertencia
+                warningDiv.classList.add('d-none');
+                zoneShiftConflict = false;
+            }
+            updateSubmitButton();
+        },
+        error: function() {
+            // En caso de error, ocultar advertencia
+            warningDiv.classList.add('d-none');
+            zoneShiftConflict = false;
+            updateSubmitButton();
+        }
+    });
+}
 
 // Función para verificar disponibilidad del empleado
 function checkEmployeeAvailability(employeeId, fieldName, currentGroupId = null) {
@@ -148,18 +207,15 @@ function checkEmployeeAvailability(employeeId, fieldName, currentGroupId = null)
         },
         success: function(response) {
             if (!response.available) {
-                // Mostrar advertencia y agregar a conflictos
                 showEmployeeWarning(fieldName, response.message);
                 conflictedEmployees.add(fieldName);
             } else {
-                // Ocultar advertencia y quitar de conflictos
                 hideEmployeeWarning(fieldName);
                 conflictedEmployees.delete(fieldName);
             }
             updateSubmitButton();
         },
         error: function() {
-            // En caso de error, ocultar advertencia
             hideEmployeeWarning(fieldName);
             conflictedEmployees.delete(fieldName);
             updateSubmitButton();
@@ -167,12 +223,10 @@ function checkEmployeeAvailability(employeeId, fieldName, currentGroupId = null)
     });
 }
 
-// Función para mostrar advertencia
+// Función para mostrar advertencia de empleado
 function showEmployeeWarning(fieldName, message) {
-    // Remover advertencia anterior si existe
     $(`#${fieldName}-warning`).remove();
     
-    // Crear elemento de advertencia
     const warningDiv = $(`
         <div id="${fieldName}-warning" class="alert alert-warning alert-dismissible fade show mt-2">
             <i class="fas fa-exclamation-triangle"></i> ${message}
@@ -182,11 +236,10 @@ function showEmployeeWarning(fieldName, message) {
         </div>
     `);
     
-    // Insertar después del campo correspondiente
     $(`#${fieldName}`).closest('.form-group').append(warningDiv);
 }
 
-// Función para ocultar advertencia
+// Función para ocultar advertencia de empleado
 function hideEmployeeWarning(fieldName) {
     $(`#${fieldName}-warning`).remove();
 }
@@ -197,19 +250,23 @@ function updateSubmitButton() {
     const formErrors = $('#form_errors');
     const errorList = $('#error_list');
     
-    if (conflictedEmployees.size > 0) {
-        // Deshabilitar botón y mostrar errores
+    const hasConflicts = conflictedEmployees.size > 0 || zoneShiftConflict;
+    
+    if (hasConflicts) {
         submitButton.prop('disabled', true).addClass('btn-secondary').removeClass('btn-success');
         formErrors.removeClass('d-none');
         
-        // Limpiar y actualizar lista de errores
         errorList.empty();
+        
+        if (zoneShiftConflict) {
+            errorList.append('<li>La zona y turno seleccionados ya están asignados a otro grupo</li>');
+        }
+        
         conflictedEmployees.forEach(fieldName => {
             const fieldLabel = getFieldLabel(fieldName);
             errorList.append(`<li>${fieldLabel} ya está asignado a otro grupo</li>`);
         });
     } else {
-        // Habilitar botón y ocultar errores
         submitButton.prop('disabled', false).removeClass('btn-secondary').addClass('btn-success');
         formErrors.addClass('d-none');
     }
@@ -230,13 +287,26 @@ function getFieldLabel(fieldName) {
 
 // Función para validar el formulario antes de enviar
 function validateFormBeforeSubmit() {
-    if (conflictedEmployees.size > 0) {
+    const hasConflicts = conflictedEmployees.size > 0 || zoneShiftConflict;
+    
+    if (hasConflicts) {
+        let errorMessages = [];
+        
+        if (zoneShiftConflict) {
+            errorMessages.push('La zona y turno seleccionados ya están asignados a otro grupo');
+        }
+        
+        conflictedEmployees.forEach(fieldName => {
+            const fieldLabel = getFieldLabel(fieldName);
+            errorMessages.push(`${fieldLabel} ya está asignado a otro grupo`);
+        });
+        
         Swal.fire({
             icon: 'error',
             title: 'Error de validación',
-            html: `No se puede guardar el grupo porque los siguientes empleados ya están asignados a otros grupos:<br><br>
-                  <strong>${Array.from(conflictedEmployees).map(field => getFieldLabel(field)).join('<br>')}</strong><br><br>
-                  Por favor, asigne empleados libres o quite las asignaciones conflictivas.`,
+            html: `No se puede guardar el grupo por las siguientes razones:<br><br>
+                  <strong>${errorMessages.join('<br>')}</strong><br><br>
+                  Por favor, corrija los conflictos antes de guardar.`,
             confirmButtonText: 'Entendido'
         });
         return false;
@@ -244,8 +314,7 @@ function validateFormBeforeSubmit() {
     return true;
 }
 
-// Función para actualizar campos de ayudantes
-// Función para actualizar campos de ayudantes
+// Resto de las funciones JavaScript permanecen iguales...
 function updateAssistantsFields() {
     const vehicleSelect = document.getElementById('vehicle_id');
     const capacityInfo = document.getElementById('capacity_info');
@@ -262,7 +331,6 @@ function updateAssistantsFields() {
     const capacity = parseInt(selectedOption.getAttribute('data-capacity'));
     const maxAssistants = Math.max(0, capacity - 1);
     
-    // Actualizar info de capacidad
     if (maxAssistants === 0) {
         capacityInfo.textContent = `Capacidad: ${capacity} personas (solo conductor)`;
         capacityInfo.className = 'form-text text-info font-weight-bold';
@@ -271,7 +339,6 @@ function updateAssistantsFields() {
         capacityInfo.className = 'form-text text-info font-weight-bold';
     }
     
-    // Generar campos de ayudantes
     assistantsContainer.innerHTML = '';
     
     for (let i = 1; i <= maxAssistants && i <= 5; i++) {
@@ -292,7 +359,6 @@ function updateAssistantsFields() {
         assistantsContainer.appendChild(fieldDiv);
     }
     
-    // Cargar ayudantes existentes si estamos editando - DESPUÉS de crear los campos
     @if(isset($group))
     setTimeout(() => {
         loadExistingAssistants();
@@ -300,18 +366,6 @@ function updateAssistantsFields() {
     @endif
 }
 
-// Función para limpiar campo de ayudante
-function clearAssistantField(number) {
-    document.getElementById(`assistant${number}_id`).value = '';
-    document.getElementById(`assistant${number}_search`).value = '';
-    document.getElementById(`selected_assistant${number}`).innerHTML = '';
-    document.getElementById(`assistant${number}_results`).innerHTML = '';
-    hideEmployeeWarning(`assistant${number}_id`);
-    conflictedEmployees.delete(`assistant${number}_id`);
-    updateSubmitButton();
-}
-
-// Función para buscar empleados
 function searchEmployees(input, type, targetId, containerId, resultsId) {
     const searchTerm = input.value;
     
@@ -320,7 +374,6 @@ function searchEmployees(input, type, targetId, containerId, resultsId) {
         return;
     }
     
-    // Mostrar loading
     document.getElementById(resultsId).innerHTML = '<div class="text-muted p-2">Buscando...</div>';
     
     fetch(`{{ route('admin.employeegroups.search.employees') }}?type=${type}&search=${encodeURIComponent(searchTerm)}`)
@@ -345,7 +398,6 @@ function searchEmployees(input, type, targetId, containerId, resultsId) {
                         input.value = '';
                     });
                     
-                    // Efecto hover
                     div.addEventListener('mouseenter', function() {
                         this.style.backgroundColor = '#007bff';
                         this.style.color = 'white';
@@ -370,7 +422,6 @@ function searchEmployees(input, type, targetId, containerId, resultsId) {
         });
 }
 
-// Función para seleccionar empleado
 function selectEmployee(employee, targetId, containerId) {
     document.getElementById(targetId).value = employee.id;
     const selectedContainer = document.getElementById(containerId);
@@ -386,12 +437,10 @@ function selectEmployee(employee, targetId, containerId) {
         </div>
     `;
     
-    // Verificar disponibilidad del empleado seleccionado
     const currentGroupId = @if(isset($group) && $isEdit) {{ $group->id }} @else null @endif;
     checkEmployeeAvailability(employee.id, targetId, currentGroupId);
 }
 
-// Función para limpiar selección
 function clearEmployeeSelection(targetId, containerId) {
     document.getElementById(targetId).value = '';
     document.getElementById(containerId).innerHTML = '';
@@ -400,7 +449,6 @@ function clearEmployeeSelection(targetId, containerId) {
     updateSubmitButton();
 }
 
-// Función para limpiar campo de ayudante
 function clearAssistantField(number) {
     document.getElementById(`assistant${number}_id`).value = '';
     document.getElementById(`assistant${number}_search`).value = '';
@@ -411,7 +459,6 @@ function clearAssistantField(number) {
     updateSubmitButton();
 }
 
-// Cargar ayudantes existentes en edición
 function loadExistingAssistants() {
     console.log('Cargando ayudantes existentes...');
     
@@ -420,16 +467,15 @@ function loadExistingAssistants() {
             @if($group->{"assistant$i"})
                 console.log('Cargando ayudante {{$i}}:', '{{ $group->{"assistant$i"}->name }}');
                 
-                // Verificar que el campo exista antes de intentar llenarlo
                 if (document.getElementById('assistant{{$i}}_id')) {
-                    const assistant{{$i}} = {
+                    const assistant = {
                         id: {{ $group->{"assistant$i"}->id }},
                         name: '{{ $group->{"assistant$i"}->name }}',
                         last_name: '{{ $group->{"assistant$i"}->last_name }}',
                         dni: '{{ $group->{"assistant$i"}->dni }}',
                         position: '{{ $group->{"assistant$i"}->employeeType->name ?? "N/A" }}'
                     };
-                    selectEmployee(assistant{{$i}}, 'assistant{{$i}}_id', 'selected_assistant{{$i}}');
+                    selectEmployee(assistant, 'assistant{{$i}}_id', 'selected_assistant{{$i}}');
                 } else {
                     console.warn('Campo assistant{{$i}}_id no encontrado');
                 }
@@ -440,7 +486,7 @@ function loadExistingAssistants() {
     @endif
 }
 
-// Inicializar eventos de validación
+// Inicializar eventos
 function initializeValidationEvents() {
     const currentGroupId = @if(isset($group) && $isEdit) {{ $group->id }} @else null @endif;
     
@@ -450,7 +496,7 @@ function initializeValidationEvents() {
         checkEmployeeAvailability(employeeId, 'driver_id', currentGroupId);
     });
     
-    // Eventos para ayudantes (se agregan dinámicamente)
+    // Eventos para ayudantes
     $(document).on('change', '[id^="assistant"][id$="_id"]', function() {
         const employeeId = $(this).val();
         const fieldName = $(this).attr('id');
@@ -471,11 +517,9 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Página cargada - inicializando campos de ayudantes');
     
     @if(isset($group) && $group->vehicle)
-        // Si estamos editando, generar campos basados en el vehículo seleccionado
         console.log('Editando grupo, vehículo seleccionado:', '{{ $group->vehicle->plate }}');
         updateAssistantsFields();
     @else
-        // Si es nuevo, verificar si ya hay un vehículo seleccionado
         const vehicleSelect = document.getElementById('vehicle_id');
         if (vehicleSelect.value) {
             console.log('Vehículo ya seleccionado:', vehicleSelect.value);
@@ -483,11 +527,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     @endif
     
-    // Inicializar eventos de validación
     initializeValidationEvents();
+    
+    // Verificar zona y turno inicial si existen
+    const zoneId = document.getElementById('zone_id').value;
+    const shiftId = document.getElementById('shift_id').value;
+    if (zoneId && shiftId) {
+        checkZoneShiftAvailability();
+    }
 });
 
-// Forzar carga después de un tiempo por si acaso
 setTimeout(() => {
     @if(isset($group) && $group->vehicle)
     if (document.getElementById('assistants_container').children.length === 0) {
@@ -539,7 +588,6 @@ setTimeout(() => {
     line-height: 1;
 }
 
-/* Estilo para select deshabilitado en edición */
 select:disabled {
     background-color: #f8f9fa;
     opacity: 1;
@@ -547,7 +595,6 @@ select:disabled {
     cursor: not-allowed;
 }
 
-/* Estilo para botón deshabilitado */
 button:disabled {
     cursor: not-allowed;
     opacity: 0.6;

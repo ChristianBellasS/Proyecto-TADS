@@ -5,10 +5,13 @@ namespace App\Http\Controllers\admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\EmployeeGroup;
+use App\Models\ConfigGroup;
 use App\Models\Zone;
 use App\Models\Shift;
 use App\Models\Vehicle;
 use App\Models\Employee;
+use App\Models\ZoneShift;
+use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 
 class EmployeeGroupController extends Controller
@@ -86,6 +89,8 @@ class EmployeeGroupController extends Controller
      */
     public function store(Request $request)
     {
+        DB::beginTransaction();
+
         try {
             $request->validate([
                 'name' => 'required|string|max:255',
@@ -113,7 +118,22 @@ class EmployeeGroupController extends Controller
                 ], 422);
             }
 
-            EmployeeGroup::create([
+            // Verificar si ya existe un grupo activo para esta zona y turno
+            $existingZoneShift = EmployeeGroup::where('zone_id', $request->zone_id)
+                ->where('shift_id', $request->shift_id)
+                ->where('status', 'active')
+                ->first();
+
+            if ($existingZoneShift) {
+                return response()->json([
+                    'message' => 'Advertencia: Ya existe un grupo activo para esta zona y turno.',
+                    'warning' => 'Zona y turno ya asignados',
+                    'existing_group' => $existingZoneShift->name
+                ], 422);
+            }
+
+            // Crear el grupo
+            $group = EmployeeGroup::create([
                 'name' => $request->name,
                 'days' => implode(',', $request->days),
                 'zone_id' => $request->zone_id,
@@ -128,8 +148,17 @@ class EmployeeGroupController extends Controller
                 'status' => 'active'
             ]);
 
+            // Registrar en configgroups
+            $this->syncConfigGroups($group, $request);
+
+            // Registrar en zone_shift
+            $this->syncZoneShift($request->zone_id, $request->shift_id);
+
+            DB::commit();
+
             return response()->json(['message' => 'Grupo de personal creado exitosamente.'], 200);
         } catch (\Throwable $th) {
+            DB::rollBack();
             return response()->json(['message' => 'Error al crear el grupo.', 'error' => $th->getMessage()], 500);
         }
     }
@@ -150,13 +179,12 @@ class EmployeeGroupController extends Controller
             
             $zones = Zone::all();
             $shifts = Shift::all();
-            
-            // En edición, mostrar todos los vehículos pero deshabilitar el cambio
             $vehicles = Vehicle::all();
-            
             $employees = Employee::where('estado', 'activo')->get();
             
-            return view('admin.employeegroups.edit', compact('group', 'zones', 'shifts', 'vehicles', 'employees'));
+            $isEdit = true;
+            
+            return view('admin.employeegroups.edit', compact('group', 'zones', 'shifts', 'vehicles', 'employees', 'isEdit'));
         } catch (\Exception $e) {
             abort(404, 'Grupo no encontrado');
         }
@@ -167,6 +195,8 @@ class EmployeeGroupController extends Controller
      */
     public function update(Request $request, string $id)
     {
+        DB::beginTransaction();
+
         try {
             $group = EmployeeGroup::findOrFail($id);
 
@@ -183,6 +213,21 @@ class EmployeeGroupController extends Controller
                 'assistant5_id' => 'nullable|exists:employees,id',
             ]);
 
+            // Verificar si ya existe otro grupo activo para esta zona y turno (excluyendo el actual)
+            $existingZoneShift = EmployeeGroup::where('zone_id', $request->zone_id)
+                ->where('shift_id', $request->shift_id)
+                ->where('status', 'active')
+                ->where('id', '!=', $id)
+                ->first();
+
+            if ($existingZoneShift) {
+                return response()->json([
+                    'message' => 'Advertencia: Ya existe otro grupo activo para esta zona y turno.',
+                    'warning' => 'Zona y turno ya asignados',
+                    'existing_group' => $existingZoneShift->name
+                ], 422);
+            }
+
             $group->update([
                 'name' => $request->name,
                 'days' => implode(',', $request->days),
@@ -196,9 +241,77 @@ class EmployeeGroupController extends Controller
                 'assistant5_id' => $request->assistant5_id,
             ]);
 
+            // Sincronizar configgroups
+            $this->syncConfigGroups($group, $request);
+
+            // Sincronizar zone_shift
+            $this->syncZoneShift($request->zone_id, $request->shift_id);
+
+            DB::commit();
+
             return response()->json(['message' => 'Grupo actualizado exitosamente.'], 200);
         } catch (\Throwable $th) {
+            DB::rollBack();
             return response()->json(['message' => 'Error al actualizar el grupo.', 'error' => $th->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Sincronizar configgroups
+     */
+    private function syncConfigGroups(EmployeeGroup $group, Request $request)
+    {
+        // Eliminar registros existentes
+        ConfigGroup::where('employeegroup_id', $group->id)->delete();
+
+        $configGroups = [];
+
+        // Registrar conductor si existe
+        if ($request->driver_id) {
+            $configGroups[] = [
+                'employeegroup_id' => $group->id,
+                'employee_id' => $request->driver_id,
+                'role' => 'conductor',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        // Registrar ayudantes si existen
+        for ($i = 1; $i <= 5; $i++) {
+            $assistantId = $request->{"assistant{$i}_id"};
+            if ($assistantId) {
+                $configGroups[] = [
+                    'employeegroup_id' => $group->id,
+                    'employee_id' => $assistantId,
+                    'role' => 'ayudante',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+        }
+
+        // Insertar todos los registros
+        if (!empty($configGroups)) {
+            ConfigGroup::insert($configGroups);
+        }
+    }
+
+    /**
+     * Sincronizar zone_shift
+     */
+    private function syncZoneShift($zoneId, $shiftId)
+    {
+        // Verificar si ya existe la relación
+        $existingZoneShift = ZoneShift::where('zone_id', $zoneId)
+            ->where('shift_id', $shiftId)
+            ->first();
+
+        if (!$existingZoneShift) {
+            ZoneShift::create([
+                'zone_id' => $zoneId,
+                'shift_id' => $shiftId,
+            ]);
         }
     }
 
@@ -207,12 +320,21 @@ class EmployeeGroupController extends Controller
      */
     public function destroy(string $id)
     {
+        DB::beginTransaction();
+
         try {
             $group = EmployeeGroup::findOrFail($id);
+            
+            // Eliminar registros relacionados en configgroups
+            ConfigGroup::where('employeegroup_id', $group->id)->delete();
+            
             $group->delete();
+
+            DB::commit();
 
             return response()->json(['message' => 'Grupo eliminado exitosamente.'], 200);
         } catch (\Throwable $th) {
+            DB::rollBack();
             return response()->json(['message' => 'Error al eliminar el grupo.', 'error' => $th->getMessage()], 500);
         }
     }
@@ -263,7 +385,47 @@ class EmployeeGroupController extends Controller
     }
 
     /**
-     * Verificar si un empleado está disponible (NUEVO MÉTODO)
+     * Verificar disponibilidad de zona y turno
+     */
+    public function checkZoneShiftAvailability(Request $request)
+    {
+        try {
+            $zoneId = $request->get('zone_id');
+            $shiftId = $request->get('shift_id');
+            $currentGroupId = $request->get('current_group_id'); // Para edición
+
+            if (!$zoneId || !$shiftId) {
+                return response()->json(['available' => true]);
+            }
+
+            $query = EmployeeGroup::where('zone_id', $zoneId)
+                ->where('shift_id', $shiftId)
+                ->where('status', 'active');
+
+            // Excluir el grupo actual si estamos editando
+            if ($currentGroupId) {
+                $query->where('id', '!=', $currentGroupId);
+            }
+
+            $existingGroup = $query->first();
+
+            if ($existingGroup) {
+                return response()->json([
+                    'available' => false,
+                    'message' => "¡ADVERTENCIA! La zona y turno seleccionados ya están asignados al grupo '{$existingGroup->name}'.",
+                    'existing_group' => $existingGroup->name
+                ]);
+            }
+
+            return response()->json(['available' => true]);
+
+        } catch (\Exception $e) {
+            return response()->json(['available' => true]);
+        }
+    }
+
+    /**
+     * Verificar si un empleado está disponible
      */
     public function checkEmployeeAvailability(Request $request)
     {
@@ -302,7 +464,7 @@ class EmployeeGroupController extends Controller
                 $role = $this->getEmployeeRole($employeeId, $existingGroup);
                 return response()->json([
                     'available' => false,
-                    'message' => "¡ADVERTENCIA! {$employee->name} {$employee->last_name} ya está asignado como {$role} en el grupo '{$existingGroup->name}'. No lo llenes de chamba, asigna a otro conductor/ayudante libre.",
+                    'message' => "¡ADVERTENCIA! {$employee->name} {$employee->last_name} ya está asignado como {$role} en el grupo '{$existingGroup->name}'.",
                     'existing_group' => $existingGroup->name
                 ]);
             }
@@ -310,12 +472,12 @@ class EmployeeGroupController extends Controller
             return response()->json(['available' => true]);
 
         } catch (\Exception $e) {
-            return response()->json(['available' => true]); // En caso de error, permitir continuar
+            return response()->json(['available' => true]);
         }
     }
 
     /**
-     * Obtener el rol del empleado en el grupo (NUEVO MÉTODO PRIVADO)
+     * Obtener el rol del empleado en el grupo
      */
     private function getEmployeeRole($employeeId, $group)
     {
