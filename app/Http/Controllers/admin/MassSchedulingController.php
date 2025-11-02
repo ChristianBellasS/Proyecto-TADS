@@ -36,7 +36,7 @@ class MassSchedulingController extends Controller
                 
             $shifts = Shift::select('id', 'name')->get();
             
-            // FALTABA: Cargar empleados
+            // Cargar empleados
             $employees = Employee::where('estado', 'activo')
                 ->select('id', 'name', 'last_name', 'employeetype_id')
                 ->get();
@@ -72,7 +72,7 @@ class MassSchedulingController extends Controller
                 $groupData['shift_id'],
                 $startDate,
                 $endDate,
-                $groupData // Pasar todos los datos del grupo incluyendo empleados seleccionados
+                $groupData
             );
 
             $validationResults[] = $validation;
@@ -105,8 +105,9 @@ class MassSchedulingController extends Controller
 
         $errors = [];
         $warnings = [];
+        $uncoveredDays = [];
 
-        // 1. Validar disponibilidad del vehículo del grupo (no se puede cambiar)
+        // 1. Validar disponibilidad del vehículo del grupo
         $vehicleConflicts = $this->checkVehicleAvailability($group->vehicle_id, $startDate, $endDate, $groupId);
         if (!empty($vehicleConflicts)) {
             $errors[] = "Vehículo no disponible en las siguientes fechas: " . implode(', ', $vehicleConflicts);
@@ -118,12 +119,19 @@ class MassSchedulingController extends Controller
             $errors[] = "El vehículo tiene capacidad para {$group->vehicle->people_capacity} personas, pero el grupo tiene {$groupSize} miembros";
         }
 
-        // 3. Validar empleados SELECCIONADOS (no los originales del grupo)
+        // 3. Validar días del grupo vs rango de fechas
+        $daysValidation = $this->validateGroupDays($group, $startDate, $endDate);
+        $uncoveredDays = $daysValidation['uncovered_days'];
+        if (!empty($daysValidation['warnings'])) {
+            $warnings = array_merge($warnings, $daysValidation['warnings']);
+        }
+
+        // 4. Validar empleados SELECCIONADOS
         $employeeValidations = $this->validateSelectedEmployees($groupData, $startDate, $endDate);
         $errors = array_merge($errors, $employeeValidations['errors']);
         $warnings = array_merge($warnings, $employeeValidations['warnings']);
 
-        // 4. Validar superposición con programaciones existentes
+        // 5. Validar superposición con programaciones existentes
         $schedulingConflicts = $this->checkExistingSchedules($groupId, $startDate, $endDate);
         if (!empty($schedulingConflicts)) {
             $warnings[] = "El grupo ya tiene programaciones en las siguientes fechas: " . implode(', ', $schedulingConflicts);
@@ -136,11 +144,81 @@ class MassSchedulingController extends Controller
             'shift_name' => $shift->name,
             'vehicle_code' => $group->vehicle->code,
             'has_errors' => !empty($errors),
-            'has_warnings' => !empty($warnings),
+            'has_warnings' => !empty($warnings) || !empty($uncoveredDays),
             'errors' => $errors,
             'warnings' => $warnings,
+            'uncovered_days' => $uncoveredDays,
             'employee_details' => $employeeValidations['details']
         ];
+    }
+
+    private function validateGroupDays($group, $startDate, $endDate)
+    {
+        $uncoveredDays = [];
+        $warnings = [];
+        
+        // Obtener días del grupo desde la base de datos
+        $groupDays = $group->days;
+        
+        if (empty($groupDays)) {
+            $warnings[] = "El grupo no tiene días asignados";
+            return ['uncovered_days' => [], 'warnings' => $warnings];
+        }
+
+        // Convertir días del grupo a array
+        $groupDaysArray = array_map('trim', explode(',', $groupDays));
+        
+        // Mapear nombres de días en español a inglés
+        $dayMapping = [
+            'Lunes' => 'Monday',
+            'Martes' => 'Tuesday', 
+            'Miércoles' => 'Wednesday',
+            'Miercoles' => 'Wednesday',
+            'Jueves' => 'Thursday',
+            'Viernes' => 'Friday',
+            'Sábado' => 'Saturday',
+            'Sabado' => 'Saturday',
+            'Domingo' => 'Sunday'
+        ];
+
+        $availableDays = [];
+        foreach ($groupDaysArray as $day) {
+            if (isset($dayMapping[$day])) {
+                $availableDays[] = $dayMapping[$day];
+            }
+        }
+
+        // Verificar cada día en el rango de fechas
+        $currentDate = $startDate->copy();
+        while ($currentDate <= $endDate) {
+            $dayOfWeek = $currentDate->format('l'); // Monday, Tuesday, etc.
+            
+            if (!in_array($dayOfWeek, $availableDays)) {
+                $uncoveredDays[] = $currentDate->format('d/m/Y') . " (" . $this->getSpanishDay($dayOfWeek) . ")";
+            }
+            
+            $currentDate->addDay();
+        }
+
+        return [
+            'uncovered_days' => $uncoveredDays,
+            'warnings' => $warnings
+        ];
+    }
+
+    private function getSpanishDay($englishDay)
+    {
+        $days = [
+            'Monday' => 'Lunes',
+            'Tuesday' => 'Martes',
+            'Wednesday' => 'Miércoles',
+            'Thursday' => 'Jueves',
+            'Friday' => 'Viernes',
+            'Saturday' => 'Sábado',
+            'Sunday' => 'Domingo'
+        ];
+        
+        return $days[$englishDay] ?? $englishDay;
     }
 
     private function getGroupMemberCount($groupData)
@@ -370,51 +448,80 @@ class MassSchedulingController extends Controller
         $schedules = [];
         $currentDate = $startDate->copy();
 
+        // Obtener días disponibles del grupo
+        $groupDays = $group->days;
+        $groupDaysArray = array_map('trim', explode(',', $groupDays));
+        
+        // Mapear días a inglés
+        $dayMapping = [
+            'Lunes' => 'Monday',
+            'Martes' => 'Tuesday', 
+            'Miércoles' => 'Wednesday',
+            'Miercoles' => 'Wednesday',
+            'Jueves' => 'Thursday',
+            'Viernes' => 'Friday',
+            'Sábado' => 'Saturday',
+            'Sabado' => 'Saturday',
+            'Domingo' => 'Sunday'
+        ];
+
+        $availableDays = [];
+        foreach ($groupDaysArray as $day) {
+            if (isset($dayMapping[$day])) {
+                $availableDays[] = $dayMapping[$day];
+            }
+        }
+
         while ($currentDate <= $endDate) {
-            // Verificar si ya existe una programación para esta fecha
-            $existing = Scheduling::where('group_id', $groupId)
-                ->where('date', $currentDate->format('Y-m-d'))
-                ->first();
+            $dayOfWeek = $currentDate->format('l');
+            
+            // Solo crear programación si el día está disponible para el grupo
+            if (in_array($dayOfWeek, $availableDays)) {
+                // Verificar si ya existe una programación para esta fecha
+                $existing = Scheduling::where('group_id', $groupId)
+                    ->where('date', $currentDate->format('Y-m-d'))
+                    ->first();
 
-            if (!$existing) {
-                $scheduling = Scheduling::create([
-                    'group_id' => $groupId,
-                    'shift_id' => $shiftId,
-                    'vehicle_id' => $group->vehicle_id, // Usar el vehículo del grupo
-                    'date' => $currentDate->format('Y-m-d'),
-                    'status' => 'active',
-                    'notes' => 'Programación masiva'
-                ]);
-
-                // Crear detalles del grupo - Conductor SELECCIONADO
-                if (!empty($groupData['driver_id'])) {
-                    GroupDetail::create([
-                        'employee_id' => $groupData['driver_id'],
-                        'scheduling_id' => $scheduling->id,
-                        'role' => 'conductor'
+                if (!$existing) {
+                    $scheduling = Scheduling::create([
+                        'group_id' => $groupId,
+                        'shift_id' => $shiftId,
+                        'vehicle_id' => $group->vehicle_id,
+                        'date' => $currentDate->format('Y-m-d'),
+                        'status' => 'active',
+                        'notes' => 'Programación masiva'
                     ]);
-                }
 
-                // Crear detalles del grupo - Ayudantes SELECCIONADOS
-                $assistants = [
-                    'assistant1_id',
-                    'assistant2_id', 
-                    'assistant3_id',
-                    'assistant4_id',
-                    'assistant5_id'
-                ];
-
-                foreach ($assistants as $assistantField) {
-                    if (!empty($groupData[$assistantField])) {
+                    // Crear detalles del grupo - Conductor SELECCIONADO
+                    if (!empty($groupData['driver_id'])) {
                         GroupDetail::create([
-                            'employee_id' => $groupData[$assistantField],
+                            'employee_id' => $groupData['driver_id'],
                             'scheduling_id' => $scheduling->id,
-                            'role' => 'ayudante'
+                            'role' => 'conductor'
                         ]);
                     }
-                }
 
-                $schedules[] = $scheduling;
+                    // Crear detalles del grupo - Ayudantes SELECCIONADOS
+                    $assistants = [
+                        'assistant1_id',
+                        'assistant2_id', 
+                        'assistant3_id',
+                        'assistant4_id',
+                        'assistant5_id'
+                    ];
+
+                    foreach ($assistants as $assistantField) {
+                        if (!empty($groupData[$assistantField])) {
+                            GroupDetail::create([
+                                'employee_id' => $groupData[$assistantField],
+                                'scheduling_id' => $scheduling->id,
+                                'role' => 'ayudante'
+                            ]);
+                        }
+                    }
+
+                    $schedules[] = $scheduling;
+                }
             }
 
             $currentDate->addDay();
@@ -451,7 +558,6 @@ class MassSchedulingController extends Controller
         ]);
     }
 
-    // Nuevo método para obtener empleados disponibles
     public function getAvailableEmployees(Request $request)
     {
         try {
