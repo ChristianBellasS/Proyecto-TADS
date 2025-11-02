@@ -19,6 +19,7 @@
     use App\Http\Controllers\admin\EmployeeGroupController;
     use App\Http\Controllers\admin\SchedulingController;
     use App\Http\Controllers\admin\ShiftController;
+    use App\Http\Controllers\admin\MassSchedulingController;
 
     // use App\Http\Controllers\AttendanceController;
     use App\Http\Controllers\admin\AttendanceController;
@@ -145,6 +146,7 @@
     // Rutas para buscar empleados en el modulo de turnos
     Route::get('admin/employeegroups/search/employees', [EmployeeGroupController::class, 'searchEmployees'])->name('admin.employeegroups.search.employees');
     Route::get('admin/employeegroups/check-employee', [EmployeeGroupController::class, 'checkEmployeeAvailability'])->name('admin.employeegroups.check-employee');
+    Route::get('admin/employeegroups/check-zone-shift', [EmployeeGroupController::class, 'checkZoneShiftAvailability'])->name('admin.employeegroups.check-zone-shift');
     // PROGRAMACIÓN
 
     Route::get('/scheduling', [SchedulingController::class, 'index'])->name('admin.scheduling.index');
