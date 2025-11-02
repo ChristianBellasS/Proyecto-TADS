@@ -70,7 +70,8 @@ class ZoneController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Zona creada exitosamente'
+            'message' => 'Zona creada exitosamente',
+            'zone_id' => $zone->id
         ]);
     }
 
