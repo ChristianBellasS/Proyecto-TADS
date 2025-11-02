@@ -12,7 +12,7 @@
             <button type="button" class="btn btn-primary" id="btnNuevaProgramacion">
                 <i class="fas fa-plus"></i> Nueva Programación
             </button>
-            <button class="btn btn-danger" id="btnBulkScheduling">
+            <button type="button" class="btn btn-danger" id="btnProgramacionMasiva">
                 <i class="fas fa-layer-group"></i> Programación Masiva
             </button>
         </div>
@@ -44,6 +44,33 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal para Programación Masiva -->
+    <div class="modal fade" id="modalProgramacionMasiva" tabindex="-1" role="dialog"
+     aria-labelledby="modalProgramacionMasivaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 1300px;">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #035286, #034c7c);">
+                <h5 class="modal-title font-weight-bold" id="modalProgramacionMasivaLabel">
+                    <i class="fas fa-layer-group mr-2 text-warning"></i> Programación Masiva
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true" class="h5 mb-0">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-4" id="modalProgramacionMasivaBody" style="max-height: 85vh; overflow-y: auto;">
+                <!-- El contenido se cargará aquí via AJAX -->
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Cargando...</span>
+                    </div>
+                    <p class="mt-2">Cargando programación masiva...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 
     <!-- Modal para Ver Detalles del Grupo -->
     <div class="modal fade" id="modalViewGroup" tabindex="-1" role="dialog" aria-labelledby="modalViewGroupLabel"
@@ -157,14 +184,14 @@
                 "columns": [{
                         "data": "date",
                         // "render": function(data) {
-                       "render": function(data, type, row) {
+                        "render": function(data, type, row) {
 
                             if (!data) return 'N/A';
 
                             // Parsear manualmente YYYY-MM-DD a DD/MM/YYYY
                             // const [year, month, day] = data.split('-');
                             // return `${day}/${month}/${year}`;
-                                    // Mostrar formato bonito solo al dibujar
+                            // Mostrar formato bonito solo al dibujar
                             if (type === 'display' || type === 'filter') {
                                 const [year, month, day] = data.split('-');
                                 return `${day}/${month}/${year}`;
@@ -315,9 +342,21 @@
                 });
             });
 
-            // Programación masiva
-            $('#btnBulkScheduling').click(function() {
-                alert('Funcionalidad de programación masiva');
+            // Programación masiva - CORREGIDO
+            $('#btnProgramacionMasiva').click(function() {
+                $.ajax({
+                    url: "{{ route('admin.mass-scheduling.index') }}",
+                    type: "GET",
+                    success: function(response) {
+                        $('#modalProgramacionMasivaBody').html(response); // ✅ CON #
+                        $('#modalProgramacionMasivaLabel').html(
+                        "Programación Masiva"); // ✅ CON #
+                        $('#modalProgramacionMasiva').modal('show');
+                    },
+                    error: function(xhr, status, error) {
+                        Swal.fire('Error', 'No se pudo cargar la programación masiva', 'error');
+                    }
+                });
             });
 
             $(document).on('shown.bs.modal', '#modalProgramacion', function() {
@@ -568,12 +607,14 @@
                             type: "GET",
                             success: function(response) {
                                 if (response.success) {
-                                    $('#modalProgramacion .modal-content').html(response.html);
+                                    $('#modalProgramacion .modal-content').html(response
+                                        .html);
                                     $('#modalProgramacion').modal('show');
                                 } else {
                                     Swal.fire(
                                         'Error',
-                                        response.message || 'Hubo un problema al cargar el formulario de edición.',
+                                        response.message ||
+                                        'Hubo un problema al cargar el formulario de edición.',
                                         'error'
                                     );
                                 }
