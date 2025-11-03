@@ -47,29 +47,29 @@
 
     <!-- Modal para Programación Masiva -->
     <div class="modal fade" id="modalProgramacionMasiva" tabindex="-1" role="dialog"
-     aria-labelledby="modalProgramacionMasivaLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 1300px;">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #035286, #034c7c);">
-                <h5 class="modal-title font-weight-bold" id="modalProgramacionMasivaLabel">
-                    <i class="fas fa-layer-group mr-2 text-warning"></i> Programación Masiva
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true" class="h5 mb-0">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body p-4" id="modalProgramacionMasivaBody" style="max-height: 85vh; overflow-y: auto;">
-                <!-- El contenido se cargará aquí via AJAX -->
-                <div class="text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="sr-only">Cargando...</span>
+        aria-labelledby="modalProgramacionMasivaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 1300px;">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #035286, #034c7c);">
+                    <h5 class="modal-title font-weight-bold" id="modalProgramacionMasivaLabel">
+                        <i class="fas fa-layer-group mr-2 text-warning"></i> Programación Masiva
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true" class="h5 mb-0">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body p-4" id="modalProgramacionMasivaBody" style="max-height: 85vh; overflow-y: auto;">
+                    <!-- El contenido se cargará aquí via AJAX -->
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Cargando...</span>
+                        </div>
+                        <p class="mt-2">Cargando programación masiva...</p>
                     </div>
-                    <p class="mt-2">Cargando programación masiva...</p>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
 
     <!-- Modal para Ver Detalles del Grupo -->
@@ -91,6 +91,31 @@
                             <span class="sr-only">Cargando...</span>
                         </div>
                         <p class="mt-2">Cargando detalles del grupo...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Cambios de Programación -->
+    <div class="modal fade" id="modalChangeScheduling" tabindex="-1" role="dialog"
+        aria-labelledby="modalChangeSchedulingLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #035286, #034c7c);">
+                    <h5 class="modal-title font-weight-bold" id="modalChangeSchedulingLabel">
+                        <i class="fas fa-exchange-alt mr-2 text-warning"></i> Modificar Programación
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true" class="h5 mb-0">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body p-4" id="modalChangeSchedulingBody" style="max-height: 80vh; overflow-y: auto;">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Cargando...</span>
+                        </div>
+                        <p class="mt-2">Cargando formulario de cambios...</p>
                     </div>
                 </div>
             </div>
@@ -350,7 +375,7 @@
                     success: function(response) {
                         $('#modalProgramacionMasivaBody').html(response); // ✅ CON #
                         $('#modalProgramacionMasivaLabel').html(
-                        "Programación Masiva"); // ✅ CON #
+                            "Programación Masiva"); // ✅ CON #
                         $('#modalProgramacionMasiva').modal('show');
                     },
                     error: function(xhr, status, error) {
@@ -579,54 +604,64 @@
                 });
             });
 
-            // Función para reasignar/reprogramar (Botón Amarillo)
+            // Función para reasignar/reprogramar
             $(document).on('click', '.btn-reassign', function() {
                 var id = $(this).data('id');
 
-                Swal.fire({
-                    title: '¿Reasignar Programación?',
-                    text: "¿Quieres reasignar el vehículo o reprogramar esta programación?",
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonColor: '#ffc107',
-                    cancelButtonColor: '#6c757d',
-                    confirmButtonText: 'Sí, reasignar',
-                    cancelButtonText: 'Cancelar'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        // Aquí iría la lógica para reasignar/reprogramar
-                        Swal.fire({
-                            title: "Función en desarrollo",
-                            text: "La funcionalidad de reasignar estará disponible pronto",
-                            icon: "info"
-                        });
+                // Mostrar modal de carga
+                $('#modalChangeSchedulingBody').html(`
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Cargando...</span>
+            </div>
+            <p class="mt-2">Cargando formulario de cambios...</p>
+        </div>
+    `);
+                $('#modalChangeScheduling').modal('show');
 
-                        // Coloca el ajax de edit.blade.php si es necesario mediante el modal
-                        $.ajax({
-                            url: "{{ url('admin/scheduling') }}/" + id + "/edit",
-                            type: "GET",
-                            success: function(response) {
-                                if (response.success) {
-                                    $('#modalProgramacion .modal-content').html(response
-                                        .html);
-                                    $('#modalProgramacion').modal('show');
-                                } else {
-                                    Swal.fire(
-                                        'Error',
-                                        response.message ||
-                                        'Hubo un problema al cargar el formulario de edición.',
-                                        'error'
-                                    );
-                                }
-                            },
-                            error: function(xhr) {
-                                Swal.fire(
-                                    'Error',
-                                    'Hubo un problema al cargar el formulario de edición.',
-                                    'error'
-                                );
-                            }
-                        });
+                // Cargar formulario de cambios
+                $.ajax({
+                    url: "{{ route('admin.scheduling.changes-form', ':id') }}".replace(':id', id),
+                    type: "GET",
+                    success: function(response) {
+                        if (typeof response === 'string' || response instanceof String) {
+                            $('#modalChangeSchedulingBody').html(response);
+                        }
+                        else if (response.success === false) {
+                            $('#modalChangeSchedulingBody').html(`
+                    <div class="alert alert-danger text-center">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        ${response.message || 'Error al cargar el formulario'}
+                    </div>
+                `);
+                        }
+                        else {
+                            $('#modalChangeSchedulingBody').html(`
+                    <div class="alert alert-warning text-center">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                        Respuesta inesperada del servidor
+                    </div>
+                `);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error AJAX:', xhr.responseText);
+
+                        let errorMessage = 'Error de conexión';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        } else if (xhr.status === 404) {
+                            errorMessage = 'Recurso no encontrado';
+                        } else if (xhr.status === 500) {
+                            errorMessage = 'Error interno del servidor';
+                        }
+
+                        $('#modalChangeSchedulingBody').html(`
+                <div class="alert alert-danger text-center">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    ${errorMessage}
+                </div>
+            `);
                     }
                 });
             });
@@ -723,6 +758,63 @@
                             Swal.fire({
                                 title: "Error!",
                                 text: 'Error al crear la programación',
+                                icon: "error"
+                            });
+                        }
+                    }
+                });
+            });
+
+            // Manejar envío del formulario de cambios
+            $(document).on('submit', '#changeSchedulingForm', function(e) {
+                e.preventDefault();
+                var form = $(this);
+                var formData = new FormData(this);
+
+                $.ajax({
+                    url: form.attr('action'),
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        if (response.success) {
+                            $('#modalChangeScheduling').modal('hide');
+                            table.ajax.reload();
+                            Swal.fire({
+                                title: "¡Éxito!",
+                                text: response.message,
+                                icon: "success",
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            Swal.fire('Error', response.message || 'Error al aplicar cambios',
+                                'error');
+                        }
+                    },
+                    error: function(xhr) {
+                        var error = xhr.responseJSON;
+                        if (error && error.errors) {
+                            var errorMessages = [];
+                            for (var key in error.errors) {
+                                errorMessages.push(error.errors[key][0]);
+                            }
+                            Swal.fire({
+                                title: "Error!",
+                                html: errorMessages.join('<br>'),
+                                icon: "error"
+                            });
+                        } else if (error && error.message) {
+                            Swal.fire({
+                                title: "Error!",
+                                text: error.message,
+                                icon: "error"
+                            });
+                        } else {
+                            Swal.fire({
+                                title: "Error!",
+                                text: 'Error al aplicar los cambios',
                                 icon: "error"
                             });
                         }

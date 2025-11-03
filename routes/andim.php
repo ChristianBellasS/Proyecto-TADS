@@ -20,6 +20,7 @@
     use App\Http\Controllers\admin\SchedulingController;
     use App\Http\Controllers\admin\ShiftController;
     use App\Http\Controllers\admin\MassSchedulingController;
+    use App\Http\Controllers\admin\SchedulingChangeController;
 
     // use App\Http\Controllers\AttendanceController;
     use App\Http\Controllers\admin\AttendanceController;
@@ -111,7 +112,7 @@
 
     // Gestión de Vacaciones
     Route::resource('vacations', VacationController::class)->names('admin.vacations');
-        
+
     // Rutas adicionales para vacaciones
     Route::post('vacations/{vacation}/approve', [VacationController::class, 'approve'])->name('admin.vacations.approve');
     Route::post('vacations/{vacation}/reject', [VacationController::class, 'reject'])->name('admin.vacations.reject');
@@ -147,6 +148,7 @@
     Route::get('admin/employeegroups/search/employees', [EmployeeGroupController::class, 'searchEmployees'])->name('admin.employeegroups.search.employees');
     Route::get('admin/employeegroups/check-employee', [EmployeeGroupController::class, 'checkEmployeeAvailability'])->name('admin.employeegroups.check-employee');
     Route::get('admin/employeegroups/check-zone-shift', [EmployeeGroupController::class, 'checkZoneShiftAvailability'])->name('admin.employeegroups.check-zone-shift');
+
     // PROGRAMACIÓN
 
     Route::get('/scheduling', [SchedulingController::class, 'index'])->name('admin.scheduling.index');
@@ -172,8 +174,6 @@
     // Guardar los cambios (PUT)
     Route::put('/admin/scheduling/{id}', [SchedulingController::class, 'update'])
         ->name('admin.scheduling.update');
-    
-
 
     // Rutas para búsqueda de grupos de personal
     Route::get('/scheduling/search-employee-groups', [SchedulingController::class, 'searchEmployeeGroups'])
@@ -197,7 +197,7 @@
 
     //TURNOS
     Route::resource('shifts', ShiftController::class)->names('admin.shifts');
-    
+
     // Route::post('scheduling/check-availability', [SchedulingController::class, 'checkAvailability'])->name('admin.scheduling.check-availability');
     // Comente esta ruta duplicada
     // Route::get('/admin/scheduling/group-data/{groupId}', [SchedulingController::class, 'getGroupData']);
@@ -222,10 +222,34 @@
     //TURNOS
     // Route::resource('shifts', ShiftController::class)->names('admin.shifts');
 
-    
-   // Programación masiva
+
+    // Programación masiva
     Route::get('mass-scheduling', [MassSchedulingController::class, 'index'])->name('admin.mass-scheduling.index');
     Route::post('/mass-scheduling/validate', [MassSchedulingController::class, 'validateMassScheduling'])->name('admin.mass-scheduling.validate');
     Route::post('/mass-scheduling/store', [MassSchedulingController::class, 'storeMassScheduling'])->name('admin.mass-scheduling.store');
     Route::post('/mass-scheduling/validate-employee', [MassSchedulingController::class, 'validateEmployeeAvailability'])->name('admin.mass-scheduling.validate-employee');
     Route::get('/mass-scheduling/available-employees', [MassSchedulingController::class, 'getAvailableEmployees'])->name('admin.mass-scheduling.available-employees');
+
+    // HISTORIAL DE CAMBIOS DE PROGRAMACIÓN 
+    
+    Route::prefix('scheduling')->group(function () {
+        // Mostrar formulario de cambios
+        Route::get('/{id}/changes', [SchedulingChangeController::class, 'showChangesForm'])
+            ->name('admin.scheduling.changes-form');
+
+        // Aplicar cambios
+        Route::post('/{id}/apply-changes', [SchedulingChangeController::class, 'applyChanges'])
+            ->name('admin.scheduling.apply-changes');
+
+        // Obtener historial de cambios
+        Route::get('/{id}/change-history', [SchedulingChangeController::class, 'getChangeHistory'])
+            ->name('admin.scheduling.change-history');
+
+        // Validar cambio individual
+        Route::post('/{id}/validate-change', [SchedulingChangeController::class, 'validateChange'])
+            ->name('admin.scheduling.validate-change');
+
+        // Validar todos los cambios juntos
+        Route::post('/{id}/validate-all-changes', [SchedulingChangeController::class, 'validateAllChanges'])
+            ->name('admin.scheduling.validate-all-changes');
+    });

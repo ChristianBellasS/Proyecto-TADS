@@ -10,6 +10,7 @@ use App\Models\Shift;
 use App\Models\Employee;
 use App\Models\GroupDetail;
 use App\Models\EmployeeGroup;
+use App\Models\SchedulingChange;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -46,7 +47,6 @@ class SchedulingController extends Controller
             } else {
                 // Si no hay filtros, mostrar todos los registros ordenados por fecha
                 $query->orderBy('date', 'asc');
-
             }
 
             $schedulings = $query->get();
@@ -530,7 +530,7 @@ class SchedulingController extends Controller
             return back()->withErrors(['error' => 'Error al crear la programación: ' . $e->getMessage()]);
         }
     }
-/*
+    /*
     public function edit($id)
     {
         $scheduling = Scheduling::with(['shift', 'vehicle', 'employees'])->findOrFail($id);
@@ -559,7 +559,7 @@ class SchedulingController extends Controller
                 'html' => $view
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error al cargar formulario de edición: ' . $e->getMessage());
+            //\Log::error('Error al cargar formulario de edición: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Error al cargar el formulario de edición: ' . $e->getMessage()
@@ -1194,10 +1194,9 @@ class SchedulingController extends Controller
             // Si hay un grupo asignado, usarlo
             if ($scheduling->group) {
                 $group = $scheduling->group;
-                \Log::info('Días del grupo: ' . $scheduling->group->days);
+                //\Log::info('Días del grupo: ' . $scheduling->group->days);
                 $workDays = isset($group->days) ? explode(',', $group->days) : [];
-                \Log::info('Días laborables: ' . json_encode($workDays));
-
+                //\Log::info('Días laborables: ' . json_encode($workDays));
             } else {
                 $group = (object)[
                     'name' => 'Grupo Temporal - Programación #' . $scheduling->id,
@@ -1213,8 +1212,6 @@ class SchedulingController extends Controller
                     'assistant4' => null,
                     'assistant5' => null
                 ];
-
-
             }
 
             $view = view('admin.scheduling.templates.group-details', [
@@ -1232,6 +1229,113 @@ class SchedulingController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al cargar los detalles del grupo: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Mostrar formulario de cambios
+     */
+    public function showChangesForm($id)
+    {
+        try {
+            $scheduling = Scheduling::with(['shift', 'vehicle', 'employees.employeeType'])->findOrFail($id);
+            $shifts = Shift::all();
+            $vehicles = Vehicle::where('status', 1)->get();
+
+            // Obtener empleados activos con su tipo
+            $employees = Employee::where('estado', 'activo')
+                ->with('employeeType')
+                ->get()
+                ->map(function ($employee) {
+                    return [
+                        'id' => $employee->id,
+                        'name' => $employee->name,
+                        'last_name' => $employee->last_name,
+                        'full_name' => $employee->name . ' ' . $employee->last_name,
+                        'dni' => $employee->dni,
+                        'employee_type_name' => $employee->employeeType->name ?? 'N/A'
+                    ];
+                });
+
+            return view('admin.scheduling.changes', compact('scheduling', 'shifts', 'vehicles', 'employees'));
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cargar el formulario de cambios: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Aplicar cambios a la programación
+     */
+    public function applyChanges(Request $request, $id)
+    {
+        DB::beginTransaction();
+
+        try {
+            $scheduling = Scheduling::findOrFail($id);
+            $changes = json_decode($request->changes, true);
+
+            foreach ($changes as $change) {
+                // Registrar en el historial
+                $scheduling->logChange(
+                    auth()->id(),
+                    $change['type'],
+                    $change['reason'],
+                    $change['old_values'],
+                    $change['new_values']
+                );
+
+                // Aplicar el cambio a la programación
+                switch ($change['type']) {
+                    case 'turno':
+                        $scheduling->update(['shift_id' => $change['new_values']['id']]);
+                        break;
+                    case 'vehiculo':
+                        $scheduling->update(['vehicle_id' => $change['new_values']['id']]);
+                        break;
+                    case 'ocupante':
+                        break;
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cambios aplicados correctamente',
+                'changes_count' => count($changes)
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al aplicar cambios: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener historial de cambios
+     */
+    public function getChangeHistory($id)
+    {
+        try {
+            $changes = SchedulingChange::with('changedBy')
+                ->where('scheduling_id', $id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'changes' => $changes
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener el historial: ' . $e->getMessage()
             ], 500);
         }
     }

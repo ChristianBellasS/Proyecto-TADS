@@ -55,8 +55,8 @@ class Scheduling extends Model
         // return $this->belongsToMany(Employee::class, 'group_details', 'scheduling_id', 'employee_id')
         return $this->belongsToMany(Employee::class, 'groupdetails', 'scheduling_id', 'employee_id')
 
-                    ->withPivot('role')
-                    ->withTimestamps();
+            ->withPivot('role')
+            ->withTimestamps();
     }
 
     // Métodos de validación
@@ -96,7 +96,7 @@ class Scheduling extends Model
         return $this->groupDetails()
             ->where('role', 'ayudante')
             ->get()
-            ->map(function($detail) {
+            ->map(function ($detail) {
                 return $detail->employee;
             })
             ->filter();
@@ -185,4 +185,31 @@ class Scheduling extends Model
         return $query->where('status', $status);
     }
     // Fin de la clase
+
+    // Historial de cambios
+    public function changes()
+    {
+        return $this->hasMany(SchedulingChange::class);
+    }
+
+    // Registrar cambios en el historial
+    public function logChange($changedBy, $changeType, $reason, $oldValues, $newValues)
+    {
+        return $this->changes()->create([
+            'changed_by' => $changedBy,
+            'change_type' => $changeType,
+            'reason' => $reason,
+            'old_values' => $oldValues,
+            'new_values' => $newValues
+        ]);
+    }
+
+    // Obtener historial de cambios ordenado
+    public function getChangeHistory()
+    {
+        return $this->changes()
+            ->with('changedBy')
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
 }
