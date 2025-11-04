@@ -600,7 +600,7 @@ class MassSchedulingController extends Controller
                         'shift_id' => $shiftId,
                         'vehicle_id' => $group->vehicle_id,
                         'date' => $dateString,
-                        'status' => 'active',
+                        'status' => 'programado',
                         'notes' => 'Programación masiva - ' . now()->format('d/m/Y H:i')
                     ]);
 
