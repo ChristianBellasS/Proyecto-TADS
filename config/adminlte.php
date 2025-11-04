@@ -465,6 +465,24 @@ return [
                 ],
             ],
         ],
+        [
+            'text' => 'GESTION DE CAMBIOS',
+            'icon' => 'fas fa-exchange-alt', 
+            'submenu' => [
+                [
+                    
+                    'text' => 'Motivos',
+                    'url' => '',
+                    'icon' => 'fas fa-fw fa-clipboard-list',
+                ],
+                [
+                    
+                    'text' => 'Cambios', 
+                    'url' => 'admin/scheduling-changes',
+                    'icon' => 'fas fa-fw fa-retweet',
+                ],
+            ],
+        ],   
     ],
 
     /*

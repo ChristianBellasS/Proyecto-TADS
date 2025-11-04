@@ -212,4 +212,9 @@ class Scheduling extends Model
             ->orderBy('created_at', 'desc')
             ->get();
     }
+
+    public function schedulingChanges()
+    {
+        return $this->hasMany(SchedulingChange::class);
+    }
 }

@@ -438,4 +438,9 @@ class Employee extends Authenticatable
             $q->where('name', 'Conductor');
         });
     }
+
+    public function configgroups()
+    {
+        return $this->hasMany(Configgroup::class, 'employee_id');
+    }
 }

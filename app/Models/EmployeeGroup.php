@@ -133,6 +133,11 @@ class EmployeeGroup extends Model
         return $query->where('status', 'active');
     }
 
+    public function schedulings()
+    {
+        return $this->hasMany(Scheduling::class, 'group_id');
+    }
+
     public function configGroups()
     {
         return $this->hasMany(ConfigGroup::class, 'employeegroup_id');

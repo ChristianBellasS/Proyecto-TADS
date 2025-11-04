@@ -21,13 +21,12 @@
     use App\Http\Controllers\admin\ShiftController;
     use App\Http\Controllers\admin\MassSchedulingController;
     use App\Http\Controllers\admin\SchedulingChangeController;
+    use App\Http\Controllers\Admin\SchedulingChangesController;
 
     // use App\Http\Controllers\AttendanceController;
     use App\Http\Controllers\admin\AttendanceController;
     use App\Http\Controllers\PublicAttendanceController;
     use App\Http\Controllers\admin\VacationController;
-
-
 
     // Página principal
     Route::get('/', [AdminController::class, 'index'])->name('admin.index');
@@ -44,6 +43,8 @@
     Route::resource('employeetypes', EmployeeTypeController::class)->names('admin.employeetypes');
     Route::resource('employees', EmployeeController::class)->names('admin.employees');
     Route::resource('employeegroups', EmployeeGroupController::class)->names('admin.employeegroups');
+    Route::resource('scheduling-changes', SchedulingChangesController::class)->names('admin.scheduling-changes');
+    
     // -------------------
     // 🔹 CONTRATOS
     // -------------------
@@ -253,3 +254,8 @@
         Route::post('/{id}/validate-all-changes', [SchedulingChangeController::class, 'validateAllChanges'])
             ->name('admin.scheduling.validate-all-changes');
     });
+
+    //updateo masivo
+    Route::get('admin/scheduling-changes/get-resources-by-range', [SchedulingChangesController::class, 'getResourcesByRange'])->name('admin.scheduling-changes.get-resources-by-range');
+    Route::get('admin/scheduling-changes/get-all-resources', [SchedulingChangesController::class, 'getAllResources'])->name('admin.scheduling-changes.get-all-resources');
+    Route::get('admin/scheduling-changes/validate-availability', [SchedulingChangesController::class, 'validateResourceAvailability'])->name('admin.scheduling-changes.validate-availability');

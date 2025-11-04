@@ -24,7 +24,7 @@ return new class extends Migration
                 ->onDelete('cascade');
 
             // Tipo de cambio (turno, vehículo u ocupante)
-            $table->enum('change_type', ['turno', 'vehiculo', 'ocupante']);
+            $table->enum('change_type', ['turno', 'vehiculo', 'ocupante', 'conductor']);
 
             // Motivo del cambio (obligatorio)
             $table->text('reason');
