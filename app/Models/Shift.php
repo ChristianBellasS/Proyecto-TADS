@@ -19,4 +19,10 @@ class Shift extends Model
     {
         return $this->hasMany(EmployeeGroup::class);
     }
+
+    // Metodo utilizado para Registrar Programaciones
+    public function schedulings()
+    {
+        return $this->hasMany(Scheduling::class);
+    }
 }
