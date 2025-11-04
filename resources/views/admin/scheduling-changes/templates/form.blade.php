@@ -31,6 +31,7 @@
             {!! Form::select(
                 'change_type',
                 [
+                    'turno' => 'Cambio de Turno',
                     'conductor' => 'Cambio de Conductor',
                     'vehiculo' => 'Cambio de Vehículo',
                     'ocupante' => 'Cambio de Ocupante',
@@ -44,6 +45,31 @@
                 ],
             ) !!}
             <div class="invalid-feedback" id="change_type_error" style="display: none;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Campos para Cambio de Turno -->
+<div class="change-field turno-fields" style="display: none;">
+    <div class="row">
+        <div class="col-6">
+            <div class="form-group">
+                {!! Form::label('turno_actual', 'Turno a Reemplazar *') !!}
+                <select class="form-control" id="turno_actual" name="turno_actual" disabled>
+                    <option value="">Seleccione turno a reemplazar</option>
+                </select>
+                <div class="invalid-feedback" id="turno_actual_error" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="form-group">
+                {!! Form::label('nuevo_turno', 'Nuevo Turno *') !!}
+                <select class="form-control" id="nuevo_turno" name="nuevo_turno" disabled>
+                    <option value="">Seleccione nuevo turno</option>
+                </select>
+                <div class="invalid-feedback" id="nuevo_turno_error" style="display: none;"></div>
+                <div class="alert alert-warning mt-2" id="turno_warning" style="display: none;"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -139,10 +165,9 @@
     </div>
 </div>
 
-
 <script>
     $(document).ready(function() {
-        console.log('✅ Script cargado - VERSIÓN CON SWEETALERT');
+        console.log('✅ Script cargado - VERSIÓN CON TURNO Y SWEETALERT');
 
         // Fechas por defecto
         var today = new Date();
@@ -206,16 +231,19 @@
 
                     if (response.resources && response.resources.length > 0) {
                         response.resources.forEach(function(item) {
-                            options += '<option value="' + item.id + '">' + item.text +
-                                '</option>';
+                            options += '<option value="' + item.id + '">' + item.text + '</option>';
                         });
                         $selectActual.html(options);
                         console.log('✅ Recursos a reemplazar cargados:', response.resources.length);
                     } else {
-                        var message = changeType === 'conductor' ? '❌ No hay conductores' :
-                            changeType === 'ocupante' ? '❌ No hay ocupantes' : '❌ No hay vehículos';
-                        $selectActual.html('<option value="">' + message +
-                            ' en este rango</option>');
+                        var message = '';
+                        switch(changeType) {
+                            case 'turno': message = '❌ No hay turnos'; break;
+                            case 'conductor': message = '❌ No hay conductores'; break;
+                            case 'ocupante': message = '❌ No hay ocupantes'; break;
+                            case 'vehiculo': message = '❌ No hay vehículos'; break;
+                        }
+                        $selectActual.html('<option value="">' + message + ' en este rango</option>');
                         console.log('❌ No hay recursos a reemplazar');
                     }
                     
@@ -247,16 +275,18 @@
 
                     if (response.resources && response.resources.length > 0) {
                         response.resources.forEach(function(item) {
-                            options += '<option value="' + item.id + '">' + item.text +
-                                '</option>';
+                            options += '<option value="' + item.id + '">' + item.text + '</option>';
                         });
                         $selectNuevo.html(options);
                         console.log('✅ Nuevos recursos cargados:', response.resources.length);
                     } else {
-                        var message = changeType === 'conductor' ?
-                            '❌ No hay conductores disponibles' :
-                            changeType === 'ocupante' ? '❌ No hay ocupantes disponibles' :
-                            '❌ No hay vehículos disponibles';
+                        var message = '';
+                        switch(changeType) {
+                            case 'turno': message = '❌ No hay turnos disponibles'; break;
+                            case 'conductor': message = '❌ No hay conductores disponibles'; break;
+                            case 'ocupante': message = '❌ No hay ocupantes disponibles'; break;
+                            case 'vehiculo': message = '❌ No hay vehículos disponibles'; break;
+                        }
                         $selectNuevo.html('<option value="">' + message + '</option>');
                         console.log('❌ No hay nuevos recursos');
                     }
@@ -366,36 +396,147 @@
             $('#btn-guardar').prop('disabled', !allValid);
         }
 
-        // Función para confirmar y guardar con SweetAlert
-        function confirmAndSave() {
+        // NUEVA FUNCIÓN: Validar antes de guardar
+        function validateBeforeSave() {
+            return new Promise((resolve, reject) => {
+                const changeType = $('#change_type').val();
+                const resourceActual = $('#' + changeType + '_actual').val();
+                const resourceNuevo = $('#nuevo_' + changeType).val();
+                const fechaInicio = $('#fecha_inicio').val();
+                const fechaFin = $('#fecha_fin').val();
+
+                $.ajax({
+                    url: "{{ route('admin.scheduling-changes.validate-resource-before-save') }}",
+                    type: 'POST',
+                    data: {
+                        fecha_inicio: fechaInicio,
+                        fecha_fin: fechaFin,
+                        change_type: changeType,
+                        resource_actual: resourceActual,
+                        resource_nuevo: resourceNuevo,
+                        _token: "{{ csrf_token() }}"
+                    },
+                    success: function(response) {
+                        resolve(response);
+                    },
+                    error: function(xhr, status, error) {
+                        reject(error);
+                    }
+                });
+            });
+        }
+
+        // Función para confirmar y guardar con SweetAlert mejorado
+        async function confirmAndSave() {
             const changeType = $('#change_type').val();
             const resourceActual = $('#' + changeType + '_actual option:selected').text();
             const resourceNuevo = $('#nuevo_' + changeType + ' option:selected').text();
             const fechaInicio = $('#fecha_inicio').val();
             const fechaFin = $('#fecha_fin').val();
-            
-            Swal.fire({
-                title: '¿Confirmar Cambio Masivo?',
-                html: `
-                    <div class="text-left">
-                        <p><strong>Tipo:</strong> ${$('#change_type option:selected').text()}</p>
-                        <p><strong>Recurso actual:</strong> ${resourceActual}</p>
-                        <p><strong>Nuevo recurso:</strong> ${resourceNuevo}</p>
-                        <p><strong>Período:</strong> ${fechaInicio} a ${fechaFin}</p>
-                    </div>
-                `,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Sí, guardar cambios',
-                cancelButtonText: 'Cancelar',
-                width: '600px'
-            }).then((result) => {
-                if (result.isConfirmed) {
+            const motivo = $('#reason').val();
+
+            try {
+                // Primero validar en el servidor
+                const validationResult = await validateBeforeSave();
+                
+                if (!validationResult.valid) {
+                    // Mostrar errores bloqueantes
+                    let errorHtml = '<div class="text-left">';
+                    errorHtml += '<p class="text-danger"><strong>Errores encontrados:</strong></p>';
+                    errorHtml += '<ul class="text-danger">';
+                    validationResult.blocking_errors.forEach(error => {
+                        errorHtml += `<li>${error}</li>`;
+                    });
+                    errorHtml += '</ul>';
+                    errorHtml += '</div>';
+
+                    Swal.fire({
+                        title: '❌ No se puede proceder',
+                        html: errorHtml,
+                        icon: 'error',
+                        confirmButtonText: 'Entendido',
+                        width: '600px'
+                    });
+                    return;
+                }
+
+                // Si hay advertencias, mostrarlas primero
+                if (validationResult.warnings.length > 0) {
+                    let warningHtml = '<div class="text-left">';
+                    warningHtml += '<p class="text-warning"><strong>Advertencias:</strong></p>';
+                    warningHtml += '<ul class="text-warning">';
+                    validationResult.warnings.forEach(warning => {
+                        warningHtml += `<li>${warning}</li>`;
+                    });
+                    warningHtml += '</ul>';
+                    warningHtml += '<hr>';
+                    warningHtml += '<p><strong>¿Desea continuar con el cambio?</strong></p>';
+                    warningHtml += '</div>';
+
+                    const confirmResult = await Swal.fire({
+                        title: '⚠️ Advertencias',
+                        html: warningHtml,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Sí, continuar',
+                        cancelButtonText: 'Cancelar',
+                        width: '600px'
+                    });
+
+                    if (!confirmResult.isConfirmed) {
+                        return;
+                    }
+                }
+
+                // Mostrar confirmación final
+                const confirmResult = await Swal.fire({
+                    title: '¿Confirmar Cambio Masivo?',
+                    html: `
+                        <div class="text-left">
+                            <div class="row">
+                                <div class="col-6">
+                                    <p><strong>Tipo de Cambio:</strong></p>
+                                    <p><strong>Fecha Inicio:</strong></p>
+                                    <p><strong>Fecha Fin:</strong></p>
+                                    <p><strong>Recurso Actual:</strong></p>
+                                    <p><strong>Nuevo Recurso:</strong></p>
+                                    <p><strong>Motivo:</strong></p>
+                                </div>
+                                <div class="col-6">
+                                    <p>${$('#change_type option:selected').text()}</p>
+                                    <p>${fechaInicio}</p>
+                                    <p>${fechaFin}</p>
+                                    <p>${resourceActual}</p>
+                                    <p>${resourceNuevo}</p>
+                                    <p><small>${motivo.substring(0, 100)}${motivo.length > 100 ? '...' : ''}</small></p>
+                                </div>
+                            </div>
+                        </div>
+                    `,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Sí, guardar cambios',
+                    cancelButtonText: 'Cancelar',
+                    width: '700px'
+                });
+
+                if (confirmResult.isConfirmed) {
                     submitForm();
                 }
-            });
+
+            } catch (error) {
+                console.error('Error en validación:', error);
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Error al validar los datos. Intente nuevamente.',
+                    icon: 'error',
+                    confirmButtonText: 'Aceptar'
+                });
+            }
         }
 
         // Función para enviar el formulario
@@ -427,7 +568,7 @@
                     if (response.success) {
                         Swal.fire({
                             title: '¡Éxito!',
-                            text: response.message + '. Programaciones afectadas: ' + response.affected_count,
+                            html: `<p>${response.message}</p><p><strong>Programaciones afectadas:</strong> ${response.affected_count}</p>`,
                             icon: 'success',
                             confirmButtonText: 'Aceptar'
                         }).then(() => {
@@ -498,6 +639,6 @@
             confirmAndSave();
         });
 
-        console.log('✅ Script CON SWEETALERT cargado correctamente');
+        console.log('✅ Script CON TURNO Y SWEETALERT cargado correctamente');
     });
 </script>

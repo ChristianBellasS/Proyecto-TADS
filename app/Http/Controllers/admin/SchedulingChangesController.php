@@ -7,8 +7,8 @@ use App\Models\Scheduling;
 use App\Models\SchedulingChange;
 use App\Models\Employee;
 use App\Models\Vehicle;
-use App\Models\Employeegroup;
-use App\Models\Configgroup;
+use App\Models\Shift;
+use App\Models\GroupDetail;
 use App\Models\Contract;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -44,7 +44,7 @@ class SchedulingChangesController extends Controller
             $request->validate([
                 'fecha_inicio' => 'required|date',
                 'fecha_fin' => 'required|date',
-                'change_type' => 'required|in:conductor,vehiculo,ocupante'
+                'change_type' => 'required|in:turno,conductor,vehiculo,ocupante'
             ]);
 
             $fechaInicio = $request->fecha_inicio;
@@ -61,16 +61,24 @@ class SchedulingChangesController extends Controller
                         'text' => $vehicle->plate . ' - ' . $vehicle->name
                     ];
                 });
+            } else if ($changeType === 'turno') {
+                // Turnos que tienen programaciones en el rango de fechas
+                $resources = Shift::whereHas('schedulings', function($q) use ($fechaInicio, $fechaFin) {
+                    $q->whereBetween('date', [$fechaInicio, $fechaFin]);
+                })->get()->map(function($shift) {
+                    return [
+                        'id' => $shift->id,
+                        'text' => $shift->name . ' (' . $shift->hour_in . ' - ' . $shift->hour_out . ')'
+                    ];
+                });
             } else {
-                // Para conductor y ocupante (ayudante)
+                // Para conductor y ocupante - usar groupdetails
                 $role = $changeType === 'conductor' ? 'conductor' : 'ayudante';
                 
-                $resources = Employee::whereHas('configgroups', function($q) use ($role, $fechaInicio, $fechaFin) {
+                $resources = Employee::whereHas('groupDetails', function($q) use ($role, $fechaInicio, $fechaFin) {
                     $q->where('role', $role)
-                      ->whereHas('employeegroup', function($query) use ($fechaInicio, $fechaFin) {
-                          $query->whereHas('schedulings', function($subQuery) use ($fechaInicio, $fechaFin) {
-                              $subQuery->whereBetween('date', [$fechaInicio, $fechaFin]);
-                          });
+                      ->whereHas('scheduling', function($query) use ($fechaInicio, $fechaFin) {
+                          $query->whereBetween('date', [$fechaInicio, $fechaFin]);
                       });
                 })->get()->map(function($empleado) {
                     return [
@@ -93,7 +101,7 @@ class SchedulingChangesController extends Controller
     {
         try {
             $request->validate([
-                'change_type' => 'required|in:conductor,vehiculo,ocupante'
+                'change_type' => 'required|in:turno,conductor,vehiculo,ocupante'
             ]);
 
             $changeType = $request->change_type;
@@ -104,6 +112,14 @@ class SchedulingChangesController extends Controller
                     return [
                         'id' => $vehicle->id,
                         'text' => $vehicle->plate . ' - ' . $vehicle->name . ' (Activo)'
+                    ];
+                });
+            } else if ($changeType === 'turno') {
+                // TODOS los turnos
+                $resources = Shift::all()->map(function($shift) {
+                    return [
+                        'id' => $shift->id,
+                        'text' => $shift->name . ' (' . $shift->hour_in . ' - ' . $shift->hour_out . ')'
                     ];
                 });
             } else {
@@ -143,7 +159,7 @@ class SchedulingChangesController extends Controller
         try {
             $request->validate([
                 'resource_id' => 'required',
-                'change_type' => 'required|in:conductor,vehiculo,ocupante',
+                'change_type' => 'required|in:turno,conductor,vehiculo,ocupante',
                 'fecha_inicio' => 'required|date',
                 'fecha_fin' => 'required|date'
             ]);
@@ -173,6 +189,15 @@ class SchedulingChangesController extends Controller
                     return response()->json([
                         'available' => false,
                         'message' => $message
+                    ]);
+                }
+            } else if ($changeType === 'turno') {
+                // Para turnos, validar que exista
+                $shift = Shift::find($resourceId);
+                if (!$shift) {
+                    return response()->json([
+                        'available' => false,
+                        'message' => 'El turno no existe'
                     ]);
                 }
             } else {
@@ -214,7 +239,7 @@ class SchedulingChangesController extends Controller
                 // Validar conflictos de horario según el rol
                 $role = $changeType === 'conductor' ? 'conductor' : 'ayudante';
                 $conflicts = Scheduling::whereBetween('date', [$fechaInicio, $fechaFin])
-                    ->whereHas('group.configgroups', function($query) use ($resourceId, $role) {
+                    ->whereHas('groupDetails', function($query) use ($resourceId, $role) {
                         $query->where('employee_id', $resourceId)
                               ->where('role', $role);
                     })
@@ -245,13 +270,87 @@ class SchedulingChangesController extends Controller
         }
     }
 
+    // MÉTODO: Validar antes de guardar con SweetAlert
+    public function validateResourceBeforeSave(Request $request)
+    {
+        try {
+            $request->validate([
+                'fecha_inicio' => 'required|date',
+                'fecha_fin' => 'required|date',
+                'change_type' => 'required|in:turno,conductor,vehiculo,ocupante',
+                'resource_actual' => 'required',
+                'resource_nuevo' => 'required'
+            ]);
+
+            $fechaInicio = $request->fecha_inicio;
+            $fechaFin = $request->fecha_fin;
+            $changeType = $request->change_type;
+            $resourceActual = $request->resource_actual;
+            $resourceNuevo = $request->resource_nuevo;
+
+            $warnings = [];
+            $blockingErrors = [];
+
+            // Validar que no sean el mismo recurso
+            if ($resourceActual == $resourceNuevo) {
+                $blockingErrors[] = 'No puede seleccionar el mismo recurso para reemplazar';
+            }
+
+            // Validar disponibilidad del nuevo recurso
+            $validationResponse = $this->validateResourceAvailability(new Request([
+                'resource_id' => $resourceNuevo,
+                'change_type' => $changeType,
+                'fecha_inicio' => $fechaInicio,
+                'fecha_fin' => $fechaFin
+            ]));
+
+            if (!$validationResponse->getData()->available) {
+                $blockingErrors[] = $validationResponse->getData()->message;
+            }
+
+            // Verificar conflictos adicionales
+            if ($changeType === 'ocupante') {
+                $employee = Employee::find($resourceNuevo);
+                if ($employee) {
+                    // Verificar si el ocupante ya tiene programaciones en otras rutas
+                    $otherSchedules = Scheduling::whereBetween('date', [$fechaInicio, $fechaFin])
+                        ->whereHas('groupDetails', function($query) use ($resourceNuevo) {
+                            $query->where('employee_id', $resourceNuevo)
+                                  ->where('role', 'ayudante');
+                        })
+                        ->count();
+
+                    if ($otherSchedules > 0) {
+                        $warnings[] = "El ocupante tiene $otherSchedules programación(es) existente(s) en el rango seleccionado";
+                    }
+                }
+            }
+
+            return response()->json([
+                'valid' => empty($blockingErrors),
+                'warnings' => $warnings,
+                'blocking_errors' => $blockingErrors,
+                'can_proceed' => empty($blockingErrors)
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error en validateResourceBeforeSave: ' . $e->getMessage());
+            return response()->json([
+                'valid' => false,
+                'warnings' => [],
+                'blocking_errors' => ['Error al validar los datos'],
+                'can_proceed' => false
+            ]);
+        }
+    }
+
     public function store(Request $request)
     {
         try {
             $request->validate([
                 'fecha_inicio' => 'required|date',
                 'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
-                'change_type' => 'required|in:conductor,vehiculo,ocupante',
+                'change_type' => 'required|in:turno,conductor,vehiculo,ocupante',
                 'reason' => 'required|string|min:10'
             ]);
 
@@ -276,38 +375,100 @@ class SchedulingChangesController extends Controller
             }
 
             switch ($changeType) {
+                case 'turno':
+                    $request->validate([
+                        'turno_actual' => 'required|exists:shifts,id',
+                        'nuevo_turno' => 'required|exists:shifts,id|different:turno_actual'
+                    ]);
+
+                    $oldShift = Shift::find($request->turno_actual);
+                    $newShift = Shift::find($request->nuevo_turno);
+
+                    $schedulings = Scheduling::whereBetween('date', [$fechaInicio, $fechaFin])
+                        ->where('shift_id', $request->turno_actual)
+                        ->get();
+
+                    foreach ($schedulings as $scheduling) {
+                        $oldShiftId = $scheduling->shift_id;
+                        $scheduling->update([
+                            'shift_id' => $request->nuevo_turno,
+                            'status' => 'Reprogramado' // ← AGREGADO AQUÍ
+                        ]);
+                        
+                        // Registrar el cambio con formato detallado como en el controlador individual
+                        SchedulingChange::create([
+                            'scheduling_id' => $scheduling->id,
+                            'changed_by' => auth()->id(),
+                            'change_type' => 'turno',
+                            'reason' => $request->reason,
+                            'old_values' => [
+                                'id' => $oldShift->id,
+                                'name' => $oldShift->name,
+                                'hour_in' => $oldShift->hour_in,
+                                'hour_out' => $oldShift->hour_out
+                            ],
+                            'new_values' => [
+                                'id' => $newShift->id,
+                                'name' => $newShift->name,
+                                'hour_in' => $newShift->hour_in,
+                                'hour_out' => $newShift->hour_out
+                            ]
+                        ]);
+                        
+                        $affectedSchedulings[] = $scheduling->id;
+                    }
+                    break;
+
                 case 'conductor':
                     $request->validate([
                         'conductor_actual' => 'required|exists:employees,id',
                         'nuevo_conductor' => 'required|exists:employees,id|different:conductor_actual'
                     ]);
 
+                    $oldConductor = Employee::find($request->conductor_actual);
+                    $newConductor = Employee::find($request->nuevo_conductor);
+
                     // Buscar programaciones en el rango donde el conductor actual está asignado
                     $schedulings = Scheduling::whereBetween('date', [$fechaInicio, $fechaFin])
-                        ->whereHas('group.configgroups', function($query) use ($request) {
+                        ->whereHas('groupDetails', function($query) use ($request) {
                             $query->where('employee_id', $request->conductor_actual)
-                                  ->where('role', 'conductor');
+                                ->where('role', 'conductor');
                         })->get();
 
                     foreach ($schedulings as $scheduling) {
-                        // Actualizar el configgroup correspondiente
-                        $configGroup = Configgroup::where('employeegroup_id', $scheduling->group_id)
+                        // Actualizar el groupdetail correspondiente
+                        $groupDetail = GroupDetail::where('scheduling_id', $scheduling->id)
                             ->where('employee_id', $request->conductor_actual)
                             ->where('role', 'conductor')
                             ->first();
 
-                        if ($configGroup) {
-                            $oldEmployeeId = $configGroup->employee_id;
-                            $configGroup->update(['employee_id' => $request->nuevo_conductor]);
+                        if ($groupDetail) {
+                            $oldEmployeeId = $groupDetail->employee_id;
+                            $groupDetail->update(['employee_id' => $request->nuevo_conductor]);
                             
-                            // Registrar el cambio - usar 'ocupante' en la tabla según la migración
+                            // Actualizar estado del scheduling a Reprogramado
+                            $scheduling->update(['status' => 'Reprogramado']); // ← AGREGADO AQUÍ
+                            
+                            // Registrar el cambio con formato detallado
                             SchedulingChange::create([
                                 'scheduling_id' => $scheduling->id,
                                 'changed_by' => auth()->id(),
-                                'change_type' => 'ocupante', // Según la migración
+                                'change_type' => 'ocupante',
                                 'reason' => $request->reason,
-                                'old_values' => ['conductor_id' => $oldEmployeeId],
-                                'new_values' => ['conductor_id' => $request->nuevo_conductor]
+                                'old_values' => [
+                                    'id' => $oldConductor->id,
+                                    'name' => $oldConductor->name . ' ' . $oldConductor->last_name,
+                                    'dni' => $oldConductor->dni,
+                                    'role' => 'conductor',
+                                    'employee_type' => $oldConductor->employeeType->name ?? 'N/A'
+                                ],
+                                'new_values' => [
+                                    'id' => $newConductor->id,
+                                    'name' => $newConductor->name . ' ' . $newConductor->last_name,
+                                    'dni' => $newConductor->dni,
+                                    'role' => 'conductor',
+                                    'employee_type' => $newConductor->employeeType->name ?? 'N/A'
+                                ]
                             ]);
                             
                             $affectedSchedulings[] = $scheduling->id;
@@ -321,22 +482,36 @@ class SchedulingChangesController extends Controller
                         'nuevo_vehiculo' => 'required|exists:vehicles,id|different:vehiculo_actual'
                     ]);
 
+                    $oldVehicle = Vehicle::find($request->vehiculo_actual);
+                    $newVehicle = Vehicle::find($request->nuevo_vehiculo);
+
                     $schedulings = Scheduling::whereBetween('date', [$fechaInicio, $fechaFin])
                         ->where('vehicle_id', $request->vehiculo_actual)
                         ->get();
 
                     foreach ($schedulings as $scheduling) {
                         $oldVehicleId = $scheduling->vehicle_id;
-                        // CORRECCIÓN: Cambiar la coma por =>
-                        $scheduling->update(['vehicle_id' => $request->nuevo_vehiculo]);
+                        $scheduling->update([
+                            'vehicle_id' => $request->nuevo_vehiculo,
+                            'status' => 'Reprogramado' // ← AGREGADO AQUÍ
+                        ]);
                         
+                        // Registrar el cambio con formato detallado
                         SchedulingChange::create([
                             'scheduling_id' => $scheduling->id,
                             'changed_by' => auth()->id(),
                             'change_type' => 'vehiculo',
                             'reason' => $request->reason,
-                            'old_values' => ['vehicle_id' => $oldVehicleId],
-                            'new_values' => ['vehicle_id' => $request->nuevo_vehiculo]
+                            'old_values' => [
+                                'id' => $oldVehicle->id,
+                                'name' => $oldVehicle->name,
+                                'plate' => $oldVehicle->plate
+                            ],
+                            'new_values' => [
+                                'id' => $newVehicle->id,
+                                'name' => $newVehicle->name,
+                                'plate' => $newVehicle->plate
+                            ]
                         ]);
                         
                         $affectedSchedulings[] = $scheduling->id;
@@ -349,32 +524,50 @@ class SchedulingChangesController extends Controller
                         'nuevo_ocupante' => 'required|exists:employees,id|different:ocupante_actual'
                     ]);
 
+                    $oldOcupante = Employee::find($request->ocupante_actual);
+                    $newOcupante = Employee::find($request->nuevo_ocupante);
+
                     // Buscar programaciones en el rango donde el ocupante (ayudante) actual está asignado
                     $schedulings = Scheduling::whereBetween('date', [$fechaInicio, $fechaFin])
-                        ->whereHas('group.configgroups', function($query) use ($request) {
+                        ->whereHas('groupDetails', function($query) use ($request) {
                             $query->where('employee_id', $request->ocupante_actual)
-                                  ->where('role', 'ayudante');
+                                ->where('role', 'ayudante');
                         })->get();
 
                     foreach ($schedulings as $scheduling) {
-                        // Actualizar el configgroup correspondiente
-                        $configGroup = Configgroup::where('employeegroup_id', $scheduling->group_id)
+                        // Actualizar el groupdetail correspondiente
+                        $groupDetail = GroupDetail::where('scheduling_id', $scheduling->id)
                             ->where('employee_id', $request->ocupante_actual)
                             ->where('role', 'ayudante')
                             ->first();
 
-                        if ($configGroup) {
-                            $oldEmployeeId = $configGroup->employee_id;
-                            $configGroup->update(['employee_id' => $request->nuevo_ocupante]);
+                        if ($groupDetail) {
+                            $oldEmployeeId = $groupDetail->employee_id;
+                            $groupDetail->update(['employee_id' => $request->nuevo_ocupante]);
                             
-                            // Registrar el cambio
+                            // Actualizar estado del scheduling a Reprogramado
+                            $scheduling->update(['status' => 'Reprogramado']); // ← AGREGADO AQUÍ
+                            
+                            // Registrar el cambio con formato detallado
                             SchedulingChange::create([
                                 'scheduling_id' => $scheduling->id,
                                 'changed_by' => auth()->id(),
                                 'change_type' => 'ocupante',
                                 'reason' => $request->reason,
-                                'old_values' => ['ocupante_id' => $oldEmployeeId],
-                                'new_values' => ['ocupante_id' => $request->nuevo_ocupante]
+                                'old_values' => [
+                                    'id' => $oldOcupante->id,
+                                    'name' => $oldOcupante->name . ' ' . $oldOcupante->last_name,
+                                    'dni' => $oldOcupante->dni,
+                                    'role' => 'ayudante',
+                                    'employee_type' => $oldOcupante->employeeType->name ?? 'N/A'
+                                ],
+                                'new_values' => [
+                                    'id' => $newOcupante->id,
+                                    'name' => $newOcupante->name . ' ' . $newOcupante->last_name,
+                                    'dni' => $newOcupante->dni,
+                                    'role' => 'ayudante',
+                                    'employee_type' => $newOcupante->employeeType->name ?? 'N/A'
+                                ]
                             ]);
                             
                             $affectedSchedulings[] = $scheduling->id;
@@ -407,7 +600,7 @@ class SchedulingChangesController extends Controller
         return view('admin.scheduling-changes.show', compact('schedulingChange'));
     }
 
-    // MÉTODO PARA ELIMINAR UN CAMBIO (OPCIONAL)
+    // MÉTODO PARA ELIMINAR UN CAMBIO
     public function destroy(SchedulingChange $schedulingChange)
     {
         try {

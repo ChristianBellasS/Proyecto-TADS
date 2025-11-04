@@ -259,3 +259,4 @@
     Route::get('admin/scheduling-changes/get-resources-by-range', [SchedulingChangesController::class, 'getResourcesByRange'])->name('admin.scheduling-changes.get-resources-by-range');
     Route::get('admin/scheduling-changes/get-all-resources', [SchedulingChangesController::class, 'getAllResources'])->name('admin.scheduling-changes.get-all-resources');
     Route::get('admin/scheduling-changes/validate-availability', [SchedulingChangesController::class, 'validateResourceAvailability'])->name('admin.scheduling-changes.validate-availability');
+    Route::post('admin/scheduling-changes/validate-before-save', [SchedulingChangesController::class, 'validateResourceBeforeSave'])->name('admin.scheduling-changes.validate-resource-before-save');

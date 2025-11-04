@@ -4,7 +4,7 @@
 
 @section('content_header')
     <button type="button" class="btn btn-success float-right" id="btnRegistrar">
-        <i class="fa fa-plus"></i> Nuevo Cambio
+        <i class="fa fa-plus"></i> Nuevo Cambio Masivo
     </button>
     <h1>Cambios de Programaciones</h1>
 @stop
@@ -49,11 +49,11 @@
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Programación</th>
-                            <th>Tipo de Cambio</th>
-                            <th>Realizado por</th>
-                            <th>Fecha del Cambio</th>
-                            <th>Motivo</th>
+                            <th>PROGRAMACIÓN</th>
+                            <th>TIPO DE CAMBIO</th>
+                            <th>REALIZADO POR</th>
+                            <th>FECHA CAMBIO</th>
+                            <th>MOTIVO</th>
                             <th width="120px">Acciones</th>
                         </tr>
                     </thead>
@@ -99,7 +99,7 @@
         <div class="modal-content border-0 shadow">
             <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #035286, #034c7c);">
                 <h5 class="modal-title font-weight-bold">
-                    <i class="fas fa-exchange-alt mr-2 text-warning" id="modalTitle"></i>Gestión de Cambios
+                    <i class="fas fa-exchange-alt mr-2 text-warning" id="modalTitle"></i>Gestión de Cambios Masivos
                 </h5>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true" class="h5 mb-0">&times;</span>
@@ -113,6 +113,10 @@
 </div>
 
 @section('js')
+    <!-- Incluir SweetAlert2 -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/i18n/es.js"></script>
@@ -157,9 +161,9 @@
                 });
             });
 
-            // Abrir modal para crear nuevo cambio - VERSIÓN SIMPLIFICADA
+            // Abrir modal para crear nuevo cambio masivo
             $('#btnRegistrar').click(function() {
-                console.log('Intentando cargar formulario de creación...');
+                console.log('Cargando formulario de cambio masivo...');
                 
                 $.ajax({
                     url: "{{ route('admin.scheduling-changes.create') }}",
@@ -167,49 +171,11 @@
                     success: function(response) {
                         console.log('Formulario cargado exitosamente');
                         $('#modalBody').html(response);
-                        $('#modalTitle').text("Nuevo Cambio");
+                        $('#modalTitle').text("Nuevo Cambio Masivo");
                         $('#modal').modal('show');
                         
-                        // Inicializar Select2 si existe
-                        if ($('.select2').length) {
-                            $('.select2').select2({
-                                width: '100%',
-                                dropdownParent: $('#modal')
-                            });
-                        }
-                        
-                        // Manejar cambios en tipo de cambio
-                        $('#change_type').change(function() {
-                            var tipo = $(this).val();
-                            $('.change-field').hide();
-                            if (tipo) {
-                                $('.' + tipo + '-fields').show();
-                            }
-                        }).trigger('change');
-                        
-                        // Manejar envío del formulario
-                        $('#modal form').off('submit').on('submit', function(e) {
-                            e.preventDefault();
-                            var form = $(this);
-                            var formData = new FormData(this);
-                            
-                            $.ajax({
-                                url: form.attr('action'),
-                                type: form.attr('method'),
-                                data: formData,
-                                processData: false,
-                                contentType: false,
-                                success: function(response) {
-                                    $('#modal').modal('hide');
-                                    location.reload();
-                                    Swal.fire('Éxito!', response.message, 'success');
-                                },
-                                error: function(xhr) {
-                                    var error = xhr.responseJSON;
-                                    Swal.fire('Error!', error?.message || 'Error desconocido', 'error');
-                                }
-                            });
-                        });
+                        // Inicializar el script del formulario de cambio masivo
+                        initializeMassiveChangeForm();
                     },
                     error: function(xhr, status, error) {
                         console.error('Error AJAX:', xhr);
@@ -222,64 +188,11 @@
                 });
             });
 
-            // Abrir modal para editar
-            $(document).on('click', '.btnEditar', function() {
-                var id = $(this).data('id');
-                
-                $.ajax({
-                    url: "{{ url('admin/scheduling-changes') }}/" + id + "/edit",
-                    type: 'GET',
-                    success: function(response) {
-                        $('#modalBody').html(response);
-                        $('#modalTitle').text("Editar Cambio");
-                        $('#modal').modal('show');
-                        
-                        // Inicializar Select2 si existe
-                        if ($('.select2').length) {
-                            $('.select2').select2({
-                                width: '100%',
-                                dropdownParent: $('#modal')
-                            });
-                        }
-                        
-                        // Manejar cambios en tipo de cambio
-                        $('#change_type').change(function() {
-                            var tipo = $(this).val();
-                            $('.change-field').hide();
-                            if (tipo) {
-                                $('.' + tipo + '-fields').show();
-                            }
-                        }).trigger('change');
-                        
-                        // Manejar envío del formulario
-                        $('#modal form').off('submit').on('submit', function(e) {
-                            e.preventDefault();
-                            var form = $(this);
-                            var formData = new FormData(this);
-                            
-                            $.ajax({
-                                url: form.attr('action'),
-                                type: form.attr('method'),
-                                data: formData,
-                                processData: false,
-                                contentType: false,
-                                success: function(response) {
-                                    $('#modal').modal('hide');
-                                    location.reload();
-                                    Swal.fire('Éxito!', response.message, 'success');
-                                },
-                                error: function(xhr) {
-                                    var error = xhr.responseJSON;
-                                    Swal.fire('Error!', error?.message || 'Error desconocido', 'error');
-                                }
-                            });
-                        });
-                    },
-                    error: function(xhr) {
-                        Swal.fire('Error', 'No se pudo cargar el formulario de edición', 'error');
-                    }
-                });
-            });
+            // Función para inicializar el formulario de cambio masivo
+            function initializeMassiveChangeForm() {
+                // El script del formulario de cambio masivo se cargará aquí
+                // desde la vista create.blade.php
+            }
 
             // Establecer fechas por defecto
             var today = new Date().toISOString().split('T')[0];
